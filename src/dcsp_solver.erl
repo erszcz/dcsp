@@ -20,7 +20,7 @@
 -include("dcsp.hrl").
 
 -record(state, {id :: atom(),
-                agents = [] :: list(pid())}).
+                agents = [] :: [{pos_integer(), pid()}]}).
 
 %%%===================================================================
 %%% API
@@ -58,10 +58,11 @@ start_link([Id, Problem]) ->
 init([Id, Problem]) ->
     error_logger:info_msg("~p ~p started. Problem: ~p~n",
                           [Id, self(), Problem]),
-    Agents = [ dcsp_agent:start_link(I, Problem, self())
-               || I <- lists:seq(1, Problem#problem.num_agents) ],
-    [ Agent ! {go, Agents} || {ok, Agent} <- Agents ],
-    {ok, #state{id = Id, agents = Agents}}.
+    OksAgentsIds = [ {dcsp_agent:start_link(AId, Problem, self()), AId}
+                     || AId <- lists:seq(1, Problem#problem.num_agents) ],
+    AgentIds = [ {AId, Agent} || {{ok, Agent}, AId} <- OksAgentsIds ],
+    [ Agent ! {go, AgentIds} || {_, Agent} <- AgentIds ],
+    {ok, #state{id = Id, agents = AgentIds}}.
 
 %%--------------------------------------------------------------------
 %% @private

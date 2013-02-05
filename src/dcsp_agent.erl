@@ -23,7 +23,7 @@
                 module :: atom(),
                 problem :: problem(),
                 solver :: pid(),
-                others :: list(pid())}).
+                others = [] :: [{pos_integer(), pid()}]}).
 
 %%%===================================================================
 %%% API
@@ -162,8 +162,9 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%                   {stop, Reason, NewState}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({go, Agents}, initial, State) ->
-    Others = [ Agent || Agent <- Agents, Agent /= self() ],
+handle_info({go, AgentIds}, initial, State) ->
+    Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
+    error_logger:info_msg("Others: ~p~n", [Others]),
     timer:sleep(2000),
     State#state.solver ! {result, 'fake-result'},
     {next_state, step, State#state{others = Others}};
