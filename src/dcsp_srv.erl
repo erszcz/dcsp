@@ -3,8 +3,7 @@
 
 %% API
 -export([start_link/0,
-         poke/1,
-         get_pokes/1]).
+         get_solver_id/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -16,7 +15,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {pokes = 0}).
+-record(state, {free_id = 0}).
 
 %% ------------------------------------------------------------------
 %% API
@@ -25,11 +24,8 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-poke(Pid) ->
-    gen_server:cast(Pid, poke).
-
-get_pokes(Pid) ->
-    gen_server:call(Pid, get_pokes).
+get_solver_id(Pid) ->
+    gen_server:call(Pid, get_solver_id).
 
 %% ------------------------------------------------------------------
 %% gen_server callbacks
@@ -39,13 +35,11 @@ init(_Args) ->
     error_logger:info_msg("~s ~p started~n", [?SERVER, self()]),
     {ok, #state{}}.
 
-handle_call(get_pokes, _From, #state{pokes = Pokes} = State) ->
-    {reply, Pokes, State};
+handle_call(get_solver_id, _From, #state{free_id = Id} = State) ->
+    {reply, Id, State#state{free_id = Id + 1}};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
-handle_cast(poke, #state{pokes = Pokes} = State) ->
-    {noreply, State#state{pokes = Pokes + 1}};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

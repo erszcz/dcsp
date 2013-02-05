@@ -8,8 +8,9 @@
 %% Supervisor callbacks
 -export([init/1]).
 
-%% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+%% Helper macro for declaring children of a supervisor
+-define(CHILD(I, Type), {I, {I, start_link, []},
+                         transient, 5000, Type, [I]}).
 
 %% ===================================================================
 %% API functions

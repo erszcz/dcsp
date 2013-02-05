@@ -8,8 +8,7 @@
 
 %% User API
 -export([start/0,
-         poke/0,
-         get_pokes/0]).
+         solve/1]).
 
 %% -------------------------------------------------------------------
 %% Application callbacks
@@ -28,8 +27,5 @@ stop(_State) ->
 start() ->
     application:start(dcsp).
 
-poke() ->
-    dcsp_srv:poke(dcsp_srv).
-
-get_pokes() ->
-    dcsp_srv:get_pokes(dcsp_srv).
+solve(Desc) ->
+    dcsp_solver:start(Desc).
