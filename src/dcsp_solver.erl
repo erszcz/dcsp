@@ -14,14 +14,19 @@
          terminate/2,
          code_change/3]).
 
--record(state, {}).
+%% Private
+-export([delete_spec/1]).
+
+-record(state, {id :: atom(),
+                agents = [] :: list(pid())}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 start(Desc) ->
-    supervisor:start_child(dcsp_sup, solver_spec(get_id(), Desc)).
+    Id = get_id(),
+    supervisor:start_child(dcsp_sup, solver_spec(Id, [Id, Desc])).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -30,8 +35,8 @@ start(Desc) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Desc) ->
-    gen_server:start_link(?MODULE, [Desc], []).
+start_link([Id, Desc]) ->
+    gen_server:start_link(?MODULE, [Id, Desc], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -48,10 +53,14 @@ start_link(Desc) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Desc]) ->
-    error_logger:info_msg("Solver ~p started. Description: ~p~n",
-                          [self(), Desc]),
-    {ok, #state{}}.
+init([Id, Desc]) ->
+    error_logger:info_msg("~p ~p started. Description: ~p~n",
+                          [Id, self(), Desc]),
+    {AgentMod, NAgents, _} = Desc,
+    Agents = [ dcsp_agent:start_link(AgentMod, Desc, self())
+               || _ <- lists:seq(1, NAgents) ],
+    [ Agent ! {go, Agents} || {ok, Agent} <- Agents ],
+    {ok, #state{id = Id, agents = Agents}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -94,6 +103,9 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({result, Result}, S) ->
+    error_logger:info_msg("~p result: ~p~n", [S#state.id, Result]),
+    {stop, normal, S};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -108,7 +120,8 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{id = Id}) ->
+    timer:apply_after(1000, ?MODULE, delete_spec, [Id]),
     ok.
 
 %%--------------------------------------------------------------------
@@ -134,3 +147,7 @@ solver_spec(SolverId, Desc) ->
 get_id() ->
     list_to_atom("solver"
                  ++ integer_to_list(dcsp_srv:get_solver_id(dcsp_srv))).
+
+delete_spec(Id) ->
+    error_logger:info_msg("Removing ~p spec: ~p~n",
+                          [Id, supervisor:delete_child(dcsp_sup, Id)]).
