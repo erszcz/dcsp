@@ -17,8 +17,11 @@
          terminate/3,
          code_change/4]).
 
--record(state, {module :: atom(),
-                desc :: term(),
+-include("dcsp.hrl").
+
+-record(state, {id :: integer(),
+                module :: atom(),
+                problem :: problem(),
                 solver :: pid(),
                 others :: list(pid())}).
 
@@ -35,8 +38,8 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Mod, Desc, Solver) ->
-    gen_fsm:start_link(?MODULE, [Mod, Desc, Solver], []).
+start_link(Id, Problem, Solver) ->
+    gen_fsm:start_link(?MODULE, [Id, Problem, Solver], []).
 
 %%%===================================================================
 %%% gen_fsm callbacks
@@ -55,8 +58,9 @@ start_link(Mod, Desc, Solver) ->
 %%                     {stop, StopReason}
 %% @end
 %%--------------------------------------------------------------------
-init([Mod, Desc, Solver]) ->
-    {ok, initial, #state{module=Mod, desc=Desc, solver=Solver}}.
+init([Id, Problem, Solver]) ->
+    Mod = Problem#problem.module,
+    {ok, initial, #state{id=Id, module=Mod, problem=Problem, solver=Solver}}.
 
 %%--------------------------------------------------------------------
 %% @private

@@ -17,6 +17,8 @@
 %% Private
 -export([delete_spec/1]).
 
+-include("dcsp.hrl").
+
 -record(state, {id :: atom(),
                 agents = [] :: list(pid())}).
 
@@ -24,9 +26,9 @@
 %%% API
 %%%===================================================================
 
-start(Desc) ->
+start(Problem) ->
     Id = get_id(),
-    supervisor:start_child(dcsp_sup, solver_spec(Id, [Id, Desc])).
+    supervisor:start_child(dcsp_sup, solver_spec(Id, [Id, Problem])).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -35,8 +37,8 @@ start(Desc) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link([Id, Desc]) ->
-    gen_server:start_link(?MODULE, [Id, Desc], []).
+start_link([Id, Problem]) ->
+    gen_server:start_link(?MODULE, [Id, Problem], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -53,12 +55,11 @@ start_link([Id, Desc]) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Id, Desc]) ->
-    error_logger:info_msg("~p ~p started. Description: ~p~n",
-                          [Id, self(), Desc]),
-    {AgentMod, NAgents, _} = Desc,
-    Agents = [ dcsp_agent:start_link(AgentMod, Desc, self())
-               || _ <- lists:seq(1, NAgents) ],
+init([Id, Problem]) ->
+    error_logger:info_msg("~p ~p started. Problem: ~p~n",
+                          [Id, self(), Problem]),
+    Agents = [ dcsp_agent:start_link(I, Problem, self())
+               || I <- lists:seq(1, Problem#problem.num_agents) ],
     [ Agent ! {go, Agents} || {ok, Agent} <- Agents ],
     {ok, #state{id = Id, agents = Agents}}.
 
@@ -139,9 +140,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-solver_spec(SolverId, Desc) ->
+solver_spec(SolverId, Problem) ->
     {SolverId,
-     {?MODULE, start_link, [Desc]},
+     {?MODULE, start_link, [Problem]},
      transient, 5000, worker, [?MODULE]}.
 
 get_id() ->
