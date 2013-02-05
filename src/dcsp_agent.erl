@@ -22,6 +22,7 @@
 -record(state, {id :: integer(),
                 module :: atom(),
                 problem :: problem(),
+                agent_view = [] :: [{pos_integer(), term()}],
                 solver :: pid(),
                 others = [] :: [{pos_integer(), pid()}]}).
 
@@ -58,9 +59,16 @@ start_link(Id, Problem, Solver) ->
 %%                     {stop, StopReason}
 %% @end
 %%--------------------------------------------------------------------
-init([Id, Problem, Solver]) ->
+init([AId, Problem, Solver]) ->
     Mod = Problem#problem.module,
-    {ok, initial, #state{id=Id, module=Mod, problem=Problem, solver=Solver}}.
+    AgentView = Mod:init(AId, Problem),
+    S = #state{id = AId,
+               module = Mod,
+               problem = Problem,
+               agent_view = AgentView,
+               solver = Solver},
+    error_logger:info_msg("Agent ~p initial state:~n~p~n", [AId, S]),
+    {ok, initial, S}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -78,8 +86,7 @@ init([Id, Problem, Solver]) ->
 %% @end
 %%--------------------------------------------------------------------
 
-%% Wait for info {go, Agents :: list(pid())} signalling that the
-%% simulation may start.
+%% Wait for info {go, _} signalling that the simulation may start.
 initial(_Event, State) ->
     {next_state, step, State}.
 
