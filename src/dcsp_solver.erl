@@ -31,7 +31,7 @@ start(Desc) ->
 %% @end
 %%--------------------------------------------------------------------
 start_link(Desc) ->
-    gen_server:start_link({local, ?MODULE}, ?MODULE, [Desc], []).
+    gen_server:start_link(?MODULE, [Desc], []).
 
 %%%===================================================================
 %%% gen_server callbacks
