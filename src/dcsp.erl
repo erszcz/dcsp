@@ -10,6 +10,8 @@
 -export([start/0,
          solve/1]).
 
+-include("dcsp.hrl").
+
 %% -------------------------------------------------------------------
 %% Application callbacks
 %% -------------------------------------------------------------------
@@ -27,5 +29,6 @@ stop(_State) ->
 start() ->
     application:start(dcsp).
 
-solve(Desc) ->
-    dcsp_solver:start(Desc).
+-spec solve(problem()) -> term() | no_solution.
+solve(Problem) ->
+    dcsp_solver:start(Problem).
