@@ -172,9 +172,9 @@ handle_sync_event(_Event, _From, StateName, State) ->
 handle_info({go, AgentIds}, initial, State) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
     error_logger:info_msg("Others: ~p~n", [Others]),
-    timer:sleep(2000),
-    State#state.solver ! {result, 'fake-result'},
-    {next_state, step, State#state{others = Others}};
+    NewState = State#state{others = Others},
+    do_step(NewState),
+    {next_state, step, NewState};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
 
@@ -207,3 +207,14 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+do_step(#state{module = Mod, problem = Problem, agent_view = View} = S) ->
+    case Mod:what_now(S#state.id, Problem, View) of
+        {AId, is_ok, Val} ->
+            aid_to_pid(AId, S) ! {is_ok, Val};
+        {AId, nogood, Val} ->
+            aid_to_pid(AId, S) ! {nogood, Val}
+    end.
+
+aid_to_pid(AId, #state{others = Others}) ->
+    proplists:get_value(AId, Others).
