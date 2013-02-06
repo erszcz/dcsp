@@ -172,8 +172,7 @@ handle_sync_event(_Event, _From, StateName, State) ->
 handle_info({go, AgentIds}, initial, State) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
     error_logger:info_msg("Others: ~p~n", [Others]),
-    NewState = State#state{others = Others},
-    check_agent_view(NewState),
+    NewState = check_agent_view(State#state{others = Others}),
     {next_state, step, NewState};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
@@ -211,7 +210,7 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 check_agent_view(State) ->
     case is_consistent(State) of
         true ->
-            ok;
+            State;
         false ->
             adjust_or_backtrack(State)
     end.
@@ -220,11 +219,12 @@ is_consistent(#state{module = Mod, agent_view = AgentView,
                      problem = Problem}) ->
     Mod:is_consistent(AgentView, Problem).
 
-adjust_or_backtrack(State) ->
+adjust_or_backtrack(#state{id = AId} = State) ->
     case try_adjust(State) of
         {ok, NewAgentView} ->
-            %% send is_ok
-            ok;
+            NewState = State#state{agent_view = NewAgentView},
+            send_is_ok(AId, NewAgentView, NewState),
+            NewState;
         false ->
             backtrack(State)
     end.
@@ -232,6 +232,14 @@ adjust_or_backtrack(State) ->
 try_adjust(#state{id = AId, agent_view = AgentView,
                   module = Mod, problem = Problem}) ->
     Mod:try_adjust(AId, AgentView, Problem).
+
+send_is_ok(AId, AgentView, State) ->
+    AgentVal = {AId, proplists:get_value(AId, AgentView)},
+    [aid_to_pid(Other, State) ! {is_ok, AgentVal}
+     || Other <- get_outgoing_links(State)].
+
+get_outgoing_links(#state{id = AId, module = Mod, problem = P}) ->
+    Mod:dependent_agents(AId, P).
 
 backtrack(_State) ->
     ok.

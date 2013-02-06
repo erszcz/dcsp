@@ -3,7 +3,8 @@
 %% API
 -export([init/2,
          is_consistent/2,
-         try_adjust/3]).
+         try_adjust/3,
+         dependent_agents/2]).
 
 -include("dcsp.hrl").
 
@@ -54,6 +55,13 @@ try_adjust(AId, AgentView, Problem) ->
     Domain = lists:nth(AId, Problem#problem.domains),
     lists:foldl(mk_adjust_one(AId, AgentView, Problem), false,
                 still_not_tried(Current, Domain)).
+
+-spec dependent_agents(aid(), problem()) -> [aid()].
+dependent_agents(AId, #problem{} = P) ->
+    Concerning = [ {A,B} || {{x,A},_,{x,B}} <- P#problem.constraints,
+                            A == AId orelse B == AId ],
+    {L,R} = lists:unzip(Concerning),
+    [ E || E <- L ++ R, E /= AId ].
 
 %% ------------------------------------------------------------------
 %% Helpers
@@ -138,5 +146,13 @@ try_adjust_test_() ->
             ?_test(?assertEqual({ok, AV4}, try_adjust(1, AV3, Problem)))
         ]
      end}.
+
+dependent_agents_test_() ->
+    {setup, fun problem/0,
+     fun(Problem) -> [
+        ?_test(?assertEqual([3], dependent_agents(1, Problem))),
+        ?_test(?assertEqual([3], dependent_agents(2, Problem))),
+        ?_test(?assertEqual([1,2], dependent_agents(3, Problem)))
+     ] end}.
 
 -endif.
