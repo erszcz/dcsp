@@ -216,11 +216,24 @@ check_agent_view(State) ->
             adjust_or_backtrack(State)
     end.
 
-is_consistent(#state{id = AId, agent_view = AgentView,
-                     module = Mod, problem = Problem}) ->
-    Mod:is_consistent(AgentView, AId, Problem).
+is_consistent(#state{module = Mod, agent_view = AgentView,
+                     problem = Problem}) ->
+    Mod:is_consistent(AgentView, Problem).
 
 adjust_or_backtrack(State) ->
+    case try_adjust(State) of
+        {ok, NewAgentView} ->
+            %% send is_ok
+            ok;
+        false ->
+            backtrack(State)
+    end.
+
+try_adjust(#state{id = AId, agent_view = AgentView,
+                  module = Mod, problem = Problem}) ->
+    Mod:try_adjust(AId, AgentView, Problem).
+
+backtrack(_State) ->
     ok.
 
 aid_to_pid(AId, #state{others = Others}) ->
