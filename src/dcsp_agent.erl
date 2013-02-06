@@ -173,7 +173,7 @@ handle_info({go, AgentIds}, initial, State) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
     error_logger:info_msg("Others: ~p~n", [Others]),
     NewState = State#state{others = Others},
-    do_step(NewState),
+    check_agent_view(NewState),
     {next_state, step, NewState};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
@@ -208,13 +208,20 @@ code_change(_OldVsn, StateName, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-do_step(#state{module = Mod, problem = Problem, agent_view = View} = S) ->
-    case Mod:what_now(S#state.id, Problem, View) of
-        {AId, is_ok, Val} ->
-            aid_to_pid(AId, S) ! {is_ok, Val};
-        {AId, nogood, Val} ->
-            aid_to_pid(AId, S) ! {nogood, Val}
+check_agent_view(State) ->
+    case is_consistent(State) of
+        true ->
+            ok;
+        false ->
+            adjust_or_backtrack(State)
     end.
+
+is_consistent(#state{id = AId, agent_view = AgentView,
+                     module = Mod, problem = Problem}) ->
+    Mod:is_consistent(AgentView, AId, Problem).
+
+adjust_or_backtrack(State) ->
+    ok.
 
 aid_to_pid(AId, #state{others = Others}) ->
     proplists:get_value(AId, Others).
