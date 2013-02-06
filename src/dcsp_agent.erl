@@ -22,7 +22,7 @@
 -record(state, {id :: integer(),
                 module :: atom(),
                 problem :: problem(),
-                agent_view = [] :: [{pos_integer(), term()}],
+                agent_view = [] :: agent_view(),
                 solver :: pid(),
                 others = [] :: [{pos_integer(), pid()}]}).
 
