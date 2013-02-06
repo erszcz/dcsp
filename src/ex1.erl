@@ -114,45 +114,36 @@ problem() ->
                        {{x,2}, '/=', {x,3}}] }.
 
 is_consistent_test_() ->
-    {setup, fun problem/0,
-     fun(Problem) -> [
-        ?_test(?assert(is_consistent([], Problem))),
-        ?_test(?assert(is_consistent([{1,1}, {3,2}], Problem))),
-        ?_test(?assert(is_consistent([{2,1}, {3,2}], Problem))),
-        ?_test(?assert(is_consistent([{1,1}, {2,2}], Problem))),
-        ?_test(?assertNot(is_consistent([{1,1}, {3,1}], Problem))),
-        ?_test(?assertNot(is_consistent([{2,1}, {3,1}], Problem)))
-     ] end}.
+    ?LET(Problem, problem(),
+         [?_test(?assert(is_consistent([], Problem))),
+          ?_test(?assert(is_consistent([{1,1}, {3,2}], Problem))),
+          ?_test(?assert(is_consistent([{2,1}, {3,2}], Problem))),
+          ?_test(?assert(is_consistent([{1,1}, {2,2}], Problem))),
+          ?_test(?assertNot(is_consistent([{1,1}, {3,1}], Problem))),
+          ?_test(?assertNot(is_consistent([{2,1}, {3,1}], Problem)))]).
 
 still_not_tried_test_() ->
-    {setup, fun problem/0,
-     fun(#problem{domains = [D1, D2, _, D4]}) -> [
-        ?_test(?assertEqual([1], still_not_tried(2, D1))),
-        ?_test(?assertEqual([], still_not_tried(2, D2))),
-        ?_test(?assertEqual([4,2,1], still_not_tried(5, D4))),
-        ?_test(?assertEqual([1], still_not_tried(2, D4)))
-     ] end}.
+    ?LET(#problem{domains = [D1, D2, _, D4]}, problem(),
+         [?_test(?assertEqual([1], still_not_tried(2, D1))),
+          ?_test(?assertEqual([], still_not_tried(2, D2))),
+          ?_test(?assertEqual([4,2,1], still_not_tried(5, D4))),
+          ?_test(?assertEqual([1], still_not_tried(2, D4)))]).
 
 try_adjust_test_() ->
-    {setup, fun problem/0,
-     fun(Problem) ->
-        AV1 = [ {1,2}, {2,2} ],
-        AV2 = [ {1,1}, {2,2} ],
-        AV3 = [ {1,2}, {3,2} ],
-        AV4 = [ {1,1}, {3,2} ],
-        [
-            ?_test(?assertEqual(false, try_adjust(2, AV1, Problem))),
-            ?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, Problem))),
-            ?_test(?assertEqual({ok, AV4}, try_adjust(1, AV3, Problem)))
-        ]
-     end}.
+    ?LET({Problem, AV1, AV2, AV3, AV4},
+         {problem(),
+          [{1,2}, {2,2}],
+          [{1,1}, {2,2}],
+          [{1,2}, {3,2}],
+          [{1,1}, {3,2}]},
+         [?_test(?assertEqual(false, try_adjust(2, AV1, Problem))),
+          ?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, Problem))),
+          ?_test(?assertEqual({ok, AV4}, try_adjust(1, AV3, Problem)))]).
 
 dependent_agents_test_() ->
-    {setup, fun problem/0,
-     fun(Problem) -> [
-        ?_test(?assertEqual([3], dependent_agents(1, Problem))),
-        ?_test(?assertEqual([3], dependent_agents(2, Problem))),
-        ?_test(?assertEqual([1,2], dependent_agents(3, Problem)))
-     ] end}.
+    ?LET(Problem, problem(),
+         [?_test(?assertEqual([3], dependent_agents(1, Problem))),
+          ?_test(?assertEqual([3], dependent_agents(2, Problem))),
+          ?_test(?assertEqual([1,2], dependent_agents(3, Problem)))]).
 
 -endif.
