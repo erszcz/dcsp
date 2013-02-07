@@ -8,6 +8,7 @@
 
 -include("dcsp.hrl").
 
+%% TODO: remove this attribute
 -compile([export_all]).
 
 %% Some assumptions:
