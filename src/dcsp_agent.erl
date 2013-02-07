@@ -174,6 +174,11 @@ handle_info({go, AgentIds}, initial, State) ->
     error_logger:info_msg("Others: ~p~n", [Others]),
     NewState = check_agent_view(State#state{others = Others}),
     {next_state, step, NewState};
+handle_info({is_ok, {AId, Val}}, step,
+            #state{agent_view = AgentView} = S) ->
+    NewAgentView = lists:keystore(AId, 1, AgentView, {AId, Val}),
+    NS = check_agent_view(S#state{agent_view = NewAgentView}),
+    {next_state, step, NS};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
 
