@@ -76,6 +76,9 @@ nogoods(_Aid, _AgentView, #problem{} = _P) ->
 agent_view_to_var_view(AgentView) ->
     [ {{x,AId},Val} || {AId,Val} <- AgentView ].
 
+var_view_to_agent_view(VarView) ->
+    [ {AId,Val} || {{x,AId},Val} <- VarView ].
+
 mk_check_constraint(VarView) ->
     fun({Var1, Op, Var2}) ->
             try
@@ -151,5 +154,18 @@ dependent_agents_test_() ->
          [?_test(?assertEqual([3], dependent_agents(1, Problem))),
           ?_test(?assertEqual([3], dependent_agents(2, Problem))),
           ?_test(?assertEqual([1,2], dependent_agents(3, Problem)))]).
+
+view_conversions_test_() ->
+    ?LET({AV, VV},
+         {[{1,2}, {2,2}, {3,2}],
+          [{{x,1}, 2}, {{x,2}, 2}, {{x,3}, 2}]},
+         [?_test(begin
+                    VV1 = agent_view_to_var_view(AV),
+                    ?assertEqual(AV, var_view_to_agent_view(VV1))
+                 end),
+          ?_test(begin
+                    AV1 = var_view_to_agent_view(VV),
+                    ?assertEqual(VV, agent_view_to_var_view(AV1))
+                 end)]).
 
 -endif.
