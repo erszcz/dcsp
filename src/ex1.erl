@@ -4,7 +4,8 @@
 -export([init/2,
          is_consistent/2,
          try_adjust/3,
-         dependent_agents/2]).
+         dependent_agents/2,
+         nogoods/3]).
 
 -include("dcsp.hrl").
 
@@ -63,6 +64,10 @@ dependent_agents(AId, #problem{} = P) ->
                             A == AId orelse B == AId ],
     {L,R} = lists:unzip(Concerning),
     [ E || E <- L ++ R, E /= AId ].
+
+-spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
+nogoods(_Aid, _AgentView, #problem{} = _P) ->
+    [].
 
 %% ------------------------------------------------------------------
 %% Helpers

@@ -108,6 +108,9 @@ handle_cast(_Msg, State) ->
 handle_info({result, Result}, S) ->
     error_logger:info_msg("~p result: ~p~n", [S#state.id, Result]),
     {stop, normal, S};
+handle_info(no_solution, S) ->
+    error_logger:info_msg("~p: no solution~n", [S#state.id]),
+    {stop, normal, S};
 handle_info(_Info, State) ->
     {noreply, State}.
 

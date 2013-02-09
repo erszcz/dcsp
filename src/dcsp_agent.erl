@@ -246,8 +246,25 @@ send_is_ok(AId, AgentView, State) ->
 get_outgoing_links(#state{id = AId, module = Mod, problem = P}) ->
     Mod:dependent_agents(AId, P).
 
-backtrack(_State) ->
-    ok.
+backtrack(State) ->
+    Nogoods = get_nogoods(State),
+    case contains_empty_nogood(Nogoods) of
+        true ->
+            no_solution(State),
+            State;
+        false ->
+            ok
+    end.
+
+get_nogoods(#state{id = AId, agent_view = AgentView,
+                   module = Mod, problem = P}) ->
+    Mod:nogoods(AId, AgentView, P).
+
+contains_empty_nogood(Nogoods) ->
+    lists:any(fun([]) -> true; (_) -> false end, Nogoods).
+
+no_solution(#state{solver = Solver}) ->
+    Solver ! no_solution.
 
 aid_to_pid(AId, #state{others = Others}) ->
     proplists:get_value(AId, Others).
