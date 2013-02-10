@@ -179,6 +179,23 @@ handle_info({is_ok, {AId, Val}}, step,
     NewAgentView = lists:keystore(AId, 1, AgentView, {AId, Val}),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
     {next_state, step, NS};
+handle_info({nogood, SenderAId, Nogood}, step,
+            #state{agent_view = AgentView} = S) ->
+    %% TODO: add nogood to nogood list -- wtf?
+    %%       there's no such thing as nogood list
+    NewAgentView = lists:ukeymerge(1, lists:ukeysort(1, Nogood),
+                                   lists:ukeysort(1, AgentView)),
+    AId = S#state.id,
+    OldValue = proplists:get_value(AId, NewAgentView),
+    NS = check_agent_view(S#state{agent_view = NewAgentView}),
+    NewValue = proplists:get_value(AId, NS#state.agent_view),
+    case OldValue == NewValue of
+        true ->
+            aid_to_pid(SenderAId, NS) ! {is_ok, {AId, NewValue}};
+        false ->
+            ok
+    end,
+    {next_state, step, NS};
 handle_info(_Info, StateName, State) ->
     {next_state, StateName, State}.
 
