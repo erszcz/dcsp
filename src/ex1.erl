@@ -66,8 +66,8 @@ dependent_agents(AId, #problem{} = P) ->
     [ E || E <- L ++ R, E /= AId ].
 
 -spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
-nogoods(_Aid, _AgentView, #problem{} = _P) ->
-    [].
+nogoods(AId, AgentView, _Problem) ->
+    [ lists:keydelete(AId, 1, AgentView) ].
 
 %% ------------------------------------------------------------------
 %% Helpers
@@ -174,9 +174,9 @@ nogoods_test_() ->
           AV2, Nogood2,
           AV3, Nogood3},
          {problem(),
-          [{1,1}, {2,2}, {3,1}], [{1,1}, {2,2}],
-          [{1,1}, {2,2}, {3,2}], [{1,1}, {2,2}],
-          [{1,1}, {2,2}], [{1,1}]},
+          [{1,1}, {2,2}, {3,1}], [[{1,1}, {2,2}]],
+          [{1,1}, {2,2}, {3,2}], [[{1,1}, {2,2}]],
+          [{1,1}, {2,2}], [[{1,1}]]},
          [?_test(?assertEqual(Nogood1, nogoods(3, AV1, Problem))),
           ?_test(?assertEqual(Nogood2, nogoods(3, AV2, Problem))),
           ?_test(?assertEqual(Nogood3, nogoods(2, AV3, Problem)))]).
