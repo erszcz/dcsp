@@ -242,7 +242,9 @@ check_agent_view(State) ->
     end.
 
 is_consistent(#state{module = Mod, agent_view = AgentView,
-                     problem = Problem}) ->
+                     problem = Problem} = S) ->
+    error_logger:info_msg("~p agent view: ~p~n",
+                          [S#state.id, AgentView]),
     Mod:is_consistent(AgentView, Problem).
 
 adjust_or_backtrack(#state{id = AId} = State) ->
