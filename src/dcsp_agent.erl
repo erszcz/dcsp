@@ -169,11 +169,12 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%                   {stop, Reason, NewState}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({go, AgentIds}, initial, State) ->
+handle_info({go, AgentIds}, initial, S) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
+    NS = S#state{others = Others},
     error_logger:info_msg("Others: ~p~n", [Others]),
-    NewState = check_agent_view(State#state{others = Others}),
-    {next_state, step, NewState};
+    send_is_ok(NS#state.id, NS#state.agent_view, NS),
+    {next_state, step, NS};
 handle_info({is_ok, {AId, Val}}, step,
             #state{agent_view = AgentView} = S) ->
     error_logger:info_msg("~p << {is_ok, {~p,~p}}~n", [S#state.id, AId, Val]),
