@@ -253,7 +253,7 @@ backtrack(State) ->
             no_solution(State),
             State;
         false ->
-            ok
+            check_agent_view(send_nogoods(Nogoods, State))
     end.
 
 get_nogoods(#state{id = AId, agent_view = AgentView,
@@ -265,6 +265,17 @@ contains_empty_nogood(Nogoods) ->
 
 no_solution(#state{solver = Solver}) ->
     Solver ! no_solution.
+
+send_nogoods([], S) ->
+    S;
+send_nogoods([Nogood | Nogoods], S) ->
+    {AId, _} = get_min_priority_agent(Nogood),
+    aid_to_pid(AId, S) ! {nogood, S#state.id, Nogood},
+    NewAgentView = lists:keydelete(AId, 1, S#state.agent_view),
+    send_nogoods(Nogoods, S#state{agent_view = NewAgentView}).
+
+get_min_priority_agent(AgentView) ->
+    lists:max(AgentView).
 
 aid_to_pid(AId, #state{others = Others}) ->
     proplists:get_value(AId, Others).
