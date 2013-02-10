@@ -43,7 +43,7 @@
 init(AId, #problem{} = P) ->
     Domain = lists:nth(AId, P#problem.domains),
     Last = element(size(Domain), Domain),
-    [{{x,AId}, Last}].
+    [{AId, Last}].
 
 -spec is_consistent(agent_view(), problem()) -> boolean().
 is_consistent(AgentView, #problem{} = P) ->
