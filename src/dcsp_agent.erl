@@ -176,11 +176,14 @@ handle_info({go, AgentIds}, initial, State) ->
     {next_state, step, NewState};
 handle_info({is_ok, {AId, Val}}, step,
             #state{agent_view = AgentView} = S) ->
+    error_logger:info_msg("~p << {is_ok, {~p,~p}}~n", [S#state.id, AId, Val]),
     NewAgentView = lists:keystore(AId, 1, AgentView, {AId, Val}),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
     {next_state, step, NS};
 handle_info({nogood, SenderAId, Nogood}, step,
             #state{agent_view = AgentView} = S) ->
+    error_logger:info_msg("~p << {nogood, ~p, ~p}~n",
+                          [S#state.id, SenderAId, Nogood]),
     %% TODO: add nogood to nogood list -- wtf?
     %%       there's no such thing as nogood list
     NewAgentView = lists:ukeymerge(1, lists:ukeysort(1, Nogood),
