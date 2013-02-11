@@ -33,14 +33,17 @@ start() ->
 solve(Problem) ->
     Self = self(),
     Ref = make_ref(),
-    ResultHandler = fun(Result) ->
-        Self ! {result, Ref, Result}
-    end,
-    {ok, Pid} = dcsp_solver:start(Problem, ResultHandler),
+    {ok, _Pid} = dcsp_solver:start(Problem, mk_result_handler(Self, Ref)),
     receive
         {result, Ref, Result} ->
-            Result
-        after 5000 ->
-            exit(Pid, normal),
+            Result;
+        {no_solution, Ref} ->
             no_solution
+    end.
+
+mk_result_handler(Self, Ref) ->
+    fun({result, Result}) ->
+            Self ! {result, Ref, Result};
+       (no_solution) ->
+            Self ! {no_solution, Ref}
     end.

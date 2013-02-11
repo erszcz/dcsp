@@ -118,13 +118,22 @@ handle_info({result, Result}, S) ->
         undefined ->
             ok;
         {Mod,Fun} ->
-            Mod:Fun(Result);
+            Mod:Fun({result, Result});
         Fun ->
-            Fun(Result)
+            Fun({result, Result})
     end,
     {stop, normal, S};
 handle_info(no_solution, S) ->
+    [ dcsp_agent:stop(Agent) || {_,Agent} <- S#state.agents ],
     error_logger:info_msg("~p: no solution~n", [S#state.id]),
+    case S#state.result_handler of
+        undefined ->
+            ok;
+        {Mod,Fun} ->
+            Mod:Fun(no_solution);
+        Fun ->
+            Fun(no_solution)
+    end,
     {stop, normal, S};
 handle_info(_Info, State) ->
     {noreply, State}.
