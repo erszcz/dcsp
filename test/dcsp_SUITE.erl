@@ -7,7 +7,7 @@ all() ->
     [{group, main}].
 
 groups() ->
-    [{main, [{repeat, 50}], [check_result]}].
+    [{main, [{repeat, 30}], [check_result]}].
 
 %% ------------------------------------------------------------------
 %% Setup / Teardown
