@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start/1,
+-export([start/1, start/2,
          start_link/1]).
 
 %% gen_server callbacks
@@ -20,15 +20,20 @@
 -include("dcsp.hrl").
 
 -record(state, {id :: atom(),
-                agents = [] :: [{pos_integer(), pid()}]}).
+                agents = [] :: [{pos_integer(), pid()}],
+                result_handler :: fun() | undefined}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 start(Problem) ->
+    start(Problem, undefined).
+
+start(Problem, ResultHandler) ->
     Id = get_id(),
-    supervisor:start_child(dcsp_sup, solver_spec(Id, [Id, Problem])).
+    supervisor:start_child(dcsp_sup,
+                           solver_spec(Id, [Id, Problem, ResultHandler])).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -37,8 +42,8 @@ start(Problem) ->
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link([Id, Problem]) ->
-    gen_server:start_link(?MODULE, [Id, Problem], []).
+start_link(Args) ->
+    gen_server:start_link(?MODULE, Args, []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -55,14 +60,15 @@ start_link([Id, Problem]) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Id, Problem]) ->
+init([Id, Problem, ResultHandler]) ->
     error_logger:info_msg("~p ~p started. Problem: ~p~n",
                           [Id, self(), Problem]),
     OksAgentsIds = [ {dcsp_agent:start_link(AId, Problem, self()), AId}
                      || AId <- lists:seq(1, Problem#problem.num_agents) ],
     AgentIds = [ {AId, Agent} || {{ok, Agent}, AId} <- OksAgentsIds ],
     [ Agent ! {go, AgentIds} || {_, Agent} <- AgentIds ],
-    {ok, #state{id = Id, agents = AgentIds}}.
+    {ok, #state{id = Id, agents = AgentIds,
+                result_handler = ResultHandler}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -108,6 +114,14 @@ handle_cast(_Msg, State) ->
 handle_info({result, Result}, S) ->
     [ dcsp_agent:stop(Agent) || {_,Agent} <- S#state.agents ],
     error_logger:info_msg("~p result: ~p~n", [S#state.id, Result]),
+    case S#state.result_handler of
+        undefined ->
+            ok;
+        {Mod,Fun} ->
+            Mod:Fun(Result);
+        Fun ->
+            Fun(Result)
+    end,
     {stop, normal, S};
 handle_info(no_solution, S) ->
     error_logger:info_msg("~p: no solution~n", [S#state.id]),
@@ -145,9 +159,9 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-solver_spec(SolverId, Problem) ->
+solver_spec(SolverId, Args) ->
     {SolverId,
-     {?MODULE, start_link, [Problem]},
+     {?MODULE, start_link, [Args]},
      transient, 5000, worker, [?MODULE]}.
 
 get_id() ->

@@ -31,4 +31,16 @@ start() ->
 
 -spec solve(problem()) -> term() | no_solution.
 solve(Problem) ->
-    dcsp_solver:start(Problem).
+    Self = self(),
+    Ref = make_ref(),
+    ResultHandler = fun(Result) ->
+        Self ! {result, Ref, Result}
+    end,
+    {ok, Pid} = dcsp_solver:start(Problem, ResultHandler),
+    receive
+        {result, Ref, Result} ->
+            Result
+        after 5000 ->
+            exit(Pid, normal),
+            no_solution
+    end.
