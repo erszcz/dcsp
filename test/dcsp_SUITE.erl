@@ -7,7 +7,7 @@ all() ->
     [{group, main}].
 
 groups() ->
-    [{main, [{repeat,20}], [check_result]}].
+    [{main, [{repeat, 50}], [check_result]}].
 
 %% ------------------------------------------------------------------
 %% Setup / Teardown
@@ -15,7 +15,8 @@ groups() ->
 
 init_per_suite(Config) ->
     dcsp:start(),
-    Config.
+    Problem = dcsp_problem:from_file("../../ex1.problem"),
+    [{problem, Problem} | Config].
 
 end_per_suite(_Config) ->
     ok.
@@ -31,5 +32,5 @@ end_per_testcase(_TestCase, _Config) ->
 %% ------------------------------------------------------------------
 
 check_result(Config) ->
-    Problem = dcsp_problem:from_file("../../ex1.problem"),
+    Problem = ?config(problem, Config),
     [{1,2},{2,2},{3,1}] = lists:sort(dcsp:solve(Problem)).
