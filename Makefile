@@ -1,8 +1,13 @@
 compile:
 	./rebar compile
 
-test:
+test: eunit ct
+
+eunit:
 	./rebar eunit
+
+ct:
+	./rebar ct
 
 console:
 	erl -pa ebin/
