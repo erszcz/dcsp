@@ -106,6 +106,7 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info({result, Result}, S) ->
+    [ dcsp_agent:stop(Agent) || {_,Agent} <- S#state.agents ],
     error_logger:info_msg("~p result: ~p~n", [S#state.id, Result]),
     {stop, normal, S};
 handle_info(no_solution, S) ->

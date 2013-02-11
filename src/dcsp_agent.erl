@@ -3,7 +3,8 @@
 -behaviour(gen_fsm).
 
 %% API
--export([start_link/3]).
+-export([start_link/3,
+         stop/1]).
 
 %% gen_fsm callbacks
 -export([init/1,
@@ -41,6 +42,9 @@
 %%--------------------------------------------------------------------
 start_link(Id, Problem, Solver) ->
     gen_fsm:start_link(?MODULE, [Id, Problem, Solver], []).
+
+stop(Pid) ->
+    gen_fsm:send_all_state_event(Pid, stop).
 
 %%%===================================================================
 %%% gen_fsm callbacks
@@ -133,6 +137,8 @@ step(_Event, _From, State) ->
 %%                   {stop, Reason, NewState}
 %% @end
 %%--------------------------------------------------------------------
+handle_event(stop, _StateName, State) ->
+    {stop, normal, State};
 handle_event(_Event, StateName, State) ->
     {next_state, StateName, State}.
 
