@@ -1,0 +1,5 @@
+.eunit
+*.beam
+ebin/dcsp.app
+logs
+tags
