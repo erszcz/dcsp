@@ -244,6 +244,7 @@ check_agent_view(State) ->
         true ->
             State;
         false ->
+            error_logger:info_msg("~p inconsistent~n", [State#state.id]),
             adjust_or_backtrack(State)
     end.
 
@@ -265,8 +266,13 @@ is_consistent(#state{module = Mod, agent_view = AgentView,
 adjust_or_backtrack(#state{id = AId} = State) ->
     case try_adjust(State) of
         {ok, NewAgentView} ->
+            AgentView = State#state.agent_view,
             NewState = State#state{agent_view = NewAgentView},
             send_is_ok(AId, NewAgentView, NewState),
+            error_logger:info_msg("~p adjusted. "
+                                  "Old agent view:~n~p~n"
+                                  "New agent view:~n~p~n",
+                                  [State#state.id, AgentView, NewAgentView]),
             NewState;
         false ->
             backtrack(State)
@@ -308,6 +314,8 @@ send_nogoods([], S) ->
     S;
 send_nogoods([Nogood | Nogoods], S) ->
     {AId, _} = get_min_priority_agent(Nogood),
+    error_logger:info_msg("~p: ~p ! {nogood, ~p, ~p}",
+                          [S#state.id, AId, S#state.id, Nogood]),
     aid_to_pid(AId, S) ! {nogood, S#state.id, Nogood},
     NewAgentView = lists:keydelete(AId, 1, S#state.agent_view),
     send_nogoods(Nogoods, S#state{agent_view = NewAgentView}).
