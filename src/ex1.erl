@@ -83,13 +83,15 @@ var_view_to_agent_view(VarView) ->
 
 mk_check_constraint(VarView) ->
     fun({Var1, Op, Var2}) ->
-            try
-                {Var1,Val1} = proplists:lookup(Var1, VarView),
-                {Var2,Val2} = proplists:lookup(Var2, VarView),
-                apply(fun erlang:Op/2, [Val1, Val2])
-            catch
-                error:{badmatch, none} ->
-                    true
+            case {proplists:get_value(Var1, VarView, false),
+                  proplists:get_value(Var2, VarView, false)}
+            of
+                {false, _} ->
+                    true;
+                {_, false} ->
+                    true;
+                {Val1, Val2} ->
+                    apply(fun erlang:Op/2, [Val1, Val2])
             end
     end.
 
