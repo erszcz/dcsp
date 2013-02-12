@@ -249,10 +249,10 @@ check_agent_view(State) ->
     end.
 
 is_consistent(#state{module = Mod, agent_view = AgentView,
-                     problem = Problem} = S) ->
+                     problem = Problem, id = AId} = S) ->
     error_logger:info_msg("~p agent view: ~p~n",
-                          [S#state.id, AgentView]),
-    case {Mod:is_consistent(AgentView, Problem),
+                          [AId, AgentView]),
+    case {Mod:is_consistent(AId, AgentView, Problem),
           length(AgentView) == Problem#problem.num_agents} of
         {true, true} ->
             S#state.solver ! {result, AgentView},

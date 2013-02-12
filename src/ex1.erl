@@ -2,7 +2,7 @@
 
 %% API
 -export([init/2,
-         is_consistent/2,
+         is_consistent/3,
          try_adjust/3,
          dependent_agents/2,
          nogoods/3]).
@@ -45,10 +45,12 @@ init(AId, #problem{} = P) ->
     Last = element(size(Domain), Domain),
     [{AId, Last}].
 
--spec is_consistent(agent_view(), problem()) -> boolean().
-is_consistent(AgentView, #problem{} = P) ->
+-spec is_consistent(aid(), agent_view(), problem()) -> boolean().
+is_consistent(AId, AgentView, #problem{} = P) ->
     VarView = agent_view_to_var_view(AgentView),
-    lists:all(mk_check_constraint(VarView), P#problem.constraints).
+    Constraints = [ C || C = {{x,A},_,{x,B}} <- P#problem.constraints,
+                         A == AId orelse B == AId ],
+    lists:all(mk_check_constraint(VarView), Constraints).
 
 -spec try_adjust(aid(), agent_view(), problem())
     -> {ok, agent_view()} | false.
@@ -97,7 +99,7 @@ mk_adjust_one(AId, AgentView, Problem) ->
        (NewCurrent, false) ->
             NewAgentView = lists:keyreplace(AId, 1, AgentView,
                                             {AId, NewCurrent}),
-            case is_consistent(NewAgentView, Problem) of
+            case is_consistent(AId, NewAgentView, Problem) of
                 true ->
                     {ok, NewAgentView};
                 false ->
