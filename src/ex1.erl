@@ -65,7 +65,7 @@ dependent_agents(AId, #problem{} = P) ->
     Concerning = [ {A,B} || {{x,A},_,{x,B}} <- P#problem.constraints,
                             A == AId orelse B == AId ],
     {L,R} = lists:unzip(Concerning),
-    [ E || E <- L ++ R, E /= AId ].
+    [ E || E <- L ++ R, E > AId ].
 
 -spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
 nogoods(AId, AgentView, _Problem) ->
