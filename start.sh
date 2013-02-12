@@ -1,3 +1,3 @@
 #!/bin/sh
 
-erl -pa ebin/ -boot start_sasl -s dcsp
+erl -sasl sasl_error_logger '{file,"logs/sasl.log"}' -sname dcsp-test -pa ebin/ -boot start_sasl -s dcsp
