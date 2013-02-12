@@ -153,7 +153,8 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{id = Id}) ->
+terminate(_Reason, #state{id = Id} = S) ->
+    [ catch exit(Pid, normal) || {_,Pid} <- S#state.agents ],
     timer:apply_after(1000, ?MODULE, delete_spec, [Id]),
     ok.
 
