@@ -8,10 +8,9 @@
 
 %% gen_fsm callbacks
 -export([init/1,
-         initial/2,
-         initial/3,
-         step/2,
-         step/3,
+         initial/2, initial/3,
+         step/2, step/3,
+         done/2, done/3,
          handle_event/3,
          handle_sync_event/4,
          handle_info/3,
@@ -19,6 +18,8 @@
          code_change/4]).
 
 -include("dcsp.hrl").
+
+-define(DONE_TIMEOUT, 1000).
 
 -record(state, {id :: integer(),
                 module :: atom(),
@@ -94,8 +95,19 @@ init([AId, Problem, Solver]) ->
 initial(_Event, State) ->
     {next_state, step, State}.
 
-step(_Event, State) ->
-    {next_state, step, State}.
+step(timeout, State) ->
+    maybe_send_done(State),
+    {next_state, done, State, ?DONE_TIMEOUT};
+step(Event, S) ->
+    log_unexpected(event, Event, step, S),
+    {next_state, step, S}.
+
+done(timeout, State) ->
+    maybe_send_done(State),
+    {next_state, done, State, ?DONE_TIMEOUT};
+done(Event, S) ->
+    log_unexpected(event, Event, done, S),
+    {next_state, step, S, ?DONE_TIMEOUT}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -116,11 +128,18 @@ step(_Event, State) ->
 %% @end
 %%--------------------------------------------------------------------
 
-initial(_Event, _From, State) ->
+initial(Event, _From, State) ->
+    log_unexpected(event, Event, initial, State),
     Reply = ok,
     {reply, Reply, state_name, State}.
 
-step(_Event, _From, State) ->
+step(Event, _From, State) ->
+    log_unexpected(event, Event, step, State),
+    Reply = ok,
+    {reply, Reply, state_name, State}.
+
+done(Event, _From, State) ->
+    log_unexpected(event, Event, done, State),
     Reply = ok,
     {reply, Reply, state_name, State}.
 
@@ -139,7 +158,8 @@ step(_Event, _From, State) ->
 %%--------------------------------------------------------------------
 handle_event(stop, _StateName, State) ->
     {stop, normal, State};
-handle_event(_Event, StateName, State) ->
+handle_event(Event, StateName, State) ->
+    log_unexpected("all state event", Event, StateName, State),
     {next_state, StateName, State}.
 
 %%--------------------------------------------------------------------
@@ -158,7 +178,8 @@ handle_event(_Event, StateName, State) ->
 %%                   {stop, Reason, Reply, NewState}
 %% @end
 %%--------------------------------------------------------------------
-handle_sync_event(_Event, _From, StateName, State) ->
+handle_sync_event(Event, _From, StateName, State) ->
+    log_unexpected("sync all state event", Event, StateName, State),
     Reply = ok,
     {reply, Reply, StateName, State}.
 
@@ -180,13 +201,14 @@ handle_info({go, AgentIds}, initial, S) ->
     NS = S#state{others = Others},
     error_logger:info_msg("Others: ~p~n", [Others]),
     send_is_ok(NS#state.id, NS#state.agent_view, NS),
-    {next_state, step, NS};
+    {next_state, step, NS, ?DONE_TIMEOUT};
+
 handle_info({is_ok, {AId, Val}}, step,
             #state{agent_view = AgentView} = S) ->
     error_logger:info_msg("~p << {is_ok, {~p,~p}}~n", [S#state.id, AId, Val]),
     NewAgentView = lists:keystore(AId, 1, AgentView, {AId, Val}),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
-    {next_state, step, NS};
+    {next_state, step, NS, ?DONE_TIMEOUT};
 handle_info({nogood, SenderAId, Nogood}, step,
             #state{agent_view = AgentView} = S) ->
     error_logger:info_msg("~p << {nogood, ~p, ~p}~n",
@@ -205,8 +227,34 @@ handle_info({nogood, SenderAId, Nogood}, step,
         false ->
             ok
     end,
-    {next_state, step, NS};
-handle_info(_Info, StateName, State) ->
+    {next_state, step, NS, ?DONE_TIMEOUT};
+
+handle_info({done, ResultAgentView}, done,
+            #state{id = AId, agent_view = AgentView,
+                   module = Mod, problem = P} = S) ->
+    Merged = lists:ukeymerge(1, lists:ukeysort(1, AgentView),
+                             lists:ukeysort(1, ResultAgentView)),
+    case {Mod:is_consistent(AId, Merged, P),
+          AId == 1}
+    of
+        {true, true} ->
+            S#state.solver ! {result, Merged};
+        {true, _} ->
+            aid_to_pid(AId - 1, S) ! {done, Merged};
+        {_, _} ->
+            error_logger:info_msg("~p inconsistent merge result:~n~p~n",
+                                  [AId, Merged])
+    end,
+    {next_state, done, S, ?DONE_TIMEOUT};
+handle_info({is_ok, _} = Event, done, State) ->
+    self() ! Event,
+    {next_state, step, State};
+handle_info({nogood, _, _} = Event, done, State) ->
+    self() ! Event,
+    {next_state, step, State};
+
+handle_info(Info, StateName, State) ->
+    log_unexpected(info, Info, StateName, State),
     {next_state, StateName, State}.
 
 %%--------------------------------------------------------------------
@@ -249,19 +297,10 @@ check_agent_view(State) ->
     end.
 
 is_consistent(#state{module = Mod, agent_view = AgentView,
-                     problem = Problem, id = AId} = S) ->
+                     problem = Problem, id = AId}) ->
     error_logger:info_msg("~p agent view: ~p~n",
                           [AId, AgentView]),
-    case {Mod:is_consistent(AId, AgentView, Problem),
-          length(AgentView) == Problem#problem.num_agents} of
-        {true, true} ->
-            S#state.solver ! {result, AgentView},
-            true;
-        {true, _} ->
-            true;
-        _ ->
-            false
-    end.
+    Mod:is_consistent(AId, AgentView, Problem).
 
 adjust_or_backtrack(#state{id = AId} = State) ->
     case try_adjust(State) of
@@ -323,5 +362,19 @@ send_nogoods([Nogood | Nogoods], S) ->
 get_min_priority_agent(AgentView) ->
     lists:max(AgentView).
 
+maybe_send_done(#state{id = AId, agent_view = AgentView, problem = P} = S) ->
+    case AId > 0 andalso AId == P#problem.num_agents of
+        true ->
+            error_logger:info_msg("~p: ~p ! {done, ~p}",
+                                  [AId, AId-1, AgentView]),
+            aid_to_pid(AId-1, S) ! {done, AgentView};
+        false ->
+            ok
+    end.
+
 aid_to_pid(AId, #state{others = Others}) ->
     proplists:get_value(AId, Others).
+
+log_unexpected(What, Event, StateName, S) ->
+    error_logger:info_msg("~p unexpected ~s in '~p' state: ~p~n",
+                          [S#state.id, What, StateName, Event]).
