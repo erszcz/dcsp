@@ -17,6 +17,8 @@
 %% Private
 -export([delete_spec/1]).
 
+-export([get_agents/1]).
+
 -include("dcsp.hrl").
 
 -record(state, {id :: atom(),
@@ -84,6 +86,8 @@ init([Id, Problem, ResultHandler]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(get_agents, _From, State) ->
+    {reply, State#state.agents, State};
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -180,3 +184,6 @@ get_id() ->
 delete_spec(Id) ->
     error_logger:info_msg("Removing ~p spec: ~p~n",
                           [Id, supervisor:delete_child(dcsp_sup, Id)]).
+
+get_agents(Pid) ->
+    gen_server:call(Pid, get_agents).
