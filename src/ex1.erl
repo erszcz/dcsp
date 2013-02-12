@@ -128,12 +128,12 @@ problem() ->
 
 is_consistent_test_() ->
     ?LET(Problem, problem(),
-         [?_test(?assert(is_consistent([], Problem))),
-          ?_test(?assert(is_consistent([{1,1}, {3,2}], Problem))),
-          ?_test(?assert(is_consistent([{2,1}, {3,2}], Problem))),
-          ?_test(?assert(is_consistent([{1,1}, {2,2}], Problem))),
-          ?_test(?assertNot(is_consistent([{1,1}, {3,1}], Problem))),
-          ?_test(?assertNot(is_consistent([{2,1}, {3,1}], Problem)))]).
+         [?_test(?assert(is_consistent(1, [], Problem))),
+          ?_test(?assert(is_consistent(1, [{1,1}, {3,2}], Problem))),
+          ?_test(?assert(is_consistent(2, [{2,1}, {3,2}], Problem))),
+          ?_test(?assert(is_consistent(1, [{1,1}, {2,2}], Problem))),
+          ?_test(?assertNot(is_consistent(1, [{1,1}, {3,1}], Problem))),
+          ?_test(?assertNot(is_consistent(2, [{2,1}, {3,1}], Problem)))]).
 
 still_not_tried_test_() ->
     ?LET(#problem{domains = [D1, D2, _, D4]}, problem(),
