@@ -153,7 +153,7 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{id = Id} = S) ->
+terminate(_Reason, #state{id = Id}) ->
     timer:apply_after(1000, ?MODULE, delete_spec, [Id]),
     ok.
 
