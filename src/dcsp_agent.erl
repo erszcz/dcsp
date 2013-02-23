@@ -206,7 +206,7 @@ handle_info({go, AgentIds}, initial, S) ->
 handle_info({is_ok, {AId, Val}}, step,
             #state{agent_view = AgentView} = S) ->
     error_logger:info_msg("~p << {is_ok, {~p,~p}}~n", [S#state.id, AId, Val]),
-    NewAgentView = lists:keystore(AId, 1, AgentView, {AId, Val}),
+    NewAgentView = lists:sort(lists:keystore(AId, 1, AgentView, {AId, Val})),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
     {next_state, step, NS, ?DONE_TIMEOUT};
 handle_info({nogood, SenderAId, Nogood}, step,
@@ -215,8 +215,7 @@ handle_info({nogood, SenderAId, Nogood}, step,
                           [S#state.id, SenderAId, Nogood]),
     %% TODO: add nogood to nogood list -- wtf?
     %%       there's no such thing as nogood list
-    NewAgentView = lists:ukeymerge(1, lists:ukeysort(1, Nogood),
-                                   lists:ukeysort(1, AgentView)),
+    NewAgentView = lists:ukeymerge(1, Nogood, AgentView),
     AId = S#state.id,
     OldValue = proplists:get_value(AId, NewAgentView),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
@@ -232,8 +231,7 @@ handle_info({nogood, SenderAId, Nogood}, step,
 handle_info({done, ResultAgentView}, done,
             #state{id = AId, agent_view = AgentView,
                    module = Mod, problem = P} = S) ->
-    Merged = lists:ukeymerge(1, lists:ukeysort(1, AgentView),
-                             lists:ukeysort(1, ResultAgentView)),
+    Merged = lists:ukeymerge(1, AgentView, ResultAgentView),
     case {Mod:is_consistent(AId, Merged, P),
           AId == 1}
     of
