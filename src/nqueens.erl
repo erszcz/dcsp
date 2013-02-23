@@ -21,11 +21,10 @@ init(AId, #problem{} = P) ->
     [{AId, lists:nth(AId, P#problem.initial)}].
 
 -spec is_consistent(aid(), agent_view(), problem()) -> boolean().
-is_consistent(AId, AgentView, #problem{} = P) ->
+is_consistent(AId, AgentView, Problem) ->
     VarView = agent_view_to_var_view(AgentView),
-    Constraints = [ C || C = {{x,A},_,{x,B}} <- P#problem.constraints,
-                         A == AId orelse B == AId ],
-    lists:all(mk_check_constraint(VarView), Constraints).
+    lists:all(mk_check_constraint(VarView),
+              concerning_constraints(AId, Problem)).
 
 -spec try_adjust(aid(), agent_view(), problem())
     -> {ok, agent_view()} | false.
@@ -54,6 +53,10 @@ agent_view_to_var_view(AgentView) ->
 
 var_view_to_agent_view(VarView) ->
     [ {AId,Val} || {{x,AId},Val} <- VarView ].
+
+concerning_constraints(AId, #problem{} = P) ->
+    [ C || C = {{x,A},_,{x,B}} <- P#problem.constraints,
+           A == AId orelse B == AId ].
 
 mk_check_constraint(VarView) ->
     fun({Var1, safe, Var2}) ->
