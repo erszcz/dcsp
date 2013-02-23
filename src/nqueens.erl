@@ -34,10 +34,10 @@ try_adjust(AId, AgentView, Problem) ->
                 still_not_tried(Current, Problem#problem.num_agents)).
 
 -spec dependent_agents(aid(), problem()) -> [aid()].
-dependent_agents(AId, #problem{} = P) ->
-    Concerning = [ {A,B} || {{x,A},_,{x,B}} <- P#problem.constraints,
-                            A == AId orelse B == AId ],
-    {L,R} = lists:unzip(Concerning),
+dependent_agents(AId, Problem) ->
+    GetAgents = fun({{x,A},_,{x,B}}) -> {A,B} end,
+    Agents = [GetAgents(C) || C <- concerning_constraints(AId, Problem)],
+    {L,R} = lists:unzip(Agents),
     [ E || E <- L ++ R, E > AId ].
 
 -spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
