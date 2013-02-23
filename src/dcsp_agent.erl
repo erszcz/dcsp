@@ -300,19 +300,18 @@ is_consistent(#state{module = Mod, agent_view = AgentView,
                           [AId, AgentView]),
     Mod:is_consistent(AId, AgentView, Problem).
 
-adjust_or_backtrack(#state{id = AId} = State) ->
-    case try_adjust(State) of
+adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
+    case try_adjust(S) of
         {ok, NewAgentView} ->
-            AgentView = State#state.agent_view,
-            NewState = State#state{agent_view = NewAgentView},
-            send_is_ok(AId, NewAgentView, NewState),
+            NS = S#state{agent_view = NewAgentView},
+            send_is_ok(AId, NewAgentView, NS),
             error_logger:info_msg("~p adjusted. "
                                   "Old agent view:~n~p~n"
                                   "New agent view:~n~p~n",
-                                  [State#state.id, AgentView, NewAgentView]),
-            NewState;
+                                  [S#state.id, AgentView, NewAgentView]),
+            NS;
         false ->
-            backtrack(State)
+            backtrack(S)
     end.
 
 try_adjust(#state{id = AId, agent_view = AgentView,
