@@ -171,8 +171,14 @@ still_not_tried_test_() ->
      ?_test(?assertEqual([{4,4},{4,1},{4,2},{4,3}],
                         still_not_tried({4,3}, 4)))].
 
-%try_adjust_test_() ->
-%    ?_test(throw(fail)).
+try_adjust_test_() ->
+    ?LET({Problem, AV1, AV2, AV3},
+         {problem(),
+          [{1,{1,1}}, {2,{3,3}}],
+          [{1,{1,2}}, {2,{3,3}}],
+          [{1,{1,1}}, {2,{3,4}}]},
+         [?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, Problem))),
+          ?_test(?assertEqual({ok, AV3}, try_adjust(2, AV1, Problem)))]).
 
 dependent_agents_test_() ->
     ?LET(Problem, problem(),
