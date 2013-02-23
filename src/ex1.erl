@@ -1,9 +1,11 @@
 -module(ex1).
 
+-behaviour(dcsp_problem_logic).
+
 %% API
 -export([init/2,
          is_consistent/3,
-         try_adjust/3,
+         try_adjust/4,
          dependent_agents/2,
          nogoods/3]).
 
@@ -52,9 +54,9 @@ is_consistent(AId, AgentView, #problem{} = P) ->
                          A == AId orelse B == AId ],
     lists:all(mk_check_constraint(VarView), Constraints).
 
--spec try_adjust(aid(), agent_view(), problem())
+-spec try_adjust(aid(), agent_view(), set(agent_view()), problem())
     -> {ok, agent_view()} | false.
-try_adjust(AId, AgentView, Problem) ->
+try_adjust(AId, AgentView, _Nogoods, Problem) ->
     Current = proplists:get_value(AId, AgentView),
     Domain = lists:nth(AId, Problem#problem.domains),
     lists:foldl(mk_adjust_one(AId, AgentView, Problem), false,
@@ -143,15 +145,15 @@ still_not_tried_test_() ->
           ?_test(?assertEqual([1], still_not_tried(2, D4)))]).
 
 try_adjust_test_() ->
-    ?LET({Problem, AV1, AV2, AV3, AV4},
-         {problem(),
+    ?LET({Problem, NG, AV1, AV2, AV3, AV4},
+         {problem(), [],
           [{1,2}, {2,2}],
           [{1,1}, {2,2}],
           [{1,2}, {3,2}],
           [{1,1}, {3,2}]},
-         [?_test(?assertEqual(false, try_adjust(2, AV1, Problem))),
-          ?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, Problem))),
-          ?_test(?assertEqual({ok, AV4}, try_adjust(1, AV3, Problem)))]).
+         [?_test(?assertEqual(false, try_adjust(2, AV1, NG, Problem))),
+          ?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, NG, Problem))),
+          ?_test(?assertEqual({ok, AV4}, try_adjust(1, AV3, NG, Problem)))]).
 
 dependent_agents_test_() ->
     ?LET(Problem, problem(),

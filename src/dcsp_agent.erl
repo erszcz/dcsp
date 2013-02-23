@@ -317,7 +317,7 @@ adjust_or_backtrack(#state{id = AId} = State) ->
 
 try_adjust(#state{id = AId, agent_view = AgentView,
                   module = Mod, problem = Problem}) ->
-    Mod:try_adjust(AId, AgentView, Problem).
+    Mod:try_adjust(AId, AgentView, [], Problem).
 
 send_is_ok(AId, AgentView, State) ->
     AgentVal = {AId, proplists:get_value(AId, AgentView)},

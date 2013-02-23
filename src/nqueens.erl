@@ -1,13 +1,15 @@
 -module(nqueens).
 
+-behaviour(dcsp_problem_logic).
+
 %% API
 -export([init/2,
          is_consistent/3,
-         try_adjust/3,
+         try_adjust/4,
          dependent_agents/2,
          nogoods/3]).
 
--include("dcsp.hrl").
+-include_lib("dcsp/include/dcsp.hrl").
 
 %% TODO: remove this attribute
 -compile([export_all]).
@@ -26,9 +28,9 @@ is_consistent(AId, AgentView, Problem) ->
     lists:all(mk_check_constraint(VarView),
               concerning_constraints(AId, Problem)).
 
--spec try_adjust(aid(), agent_view(), problem())
+-spec try_adjust(aid(), agent_view(), set(agent_view()), problem())
     -> {ok, agent_view()} | false.
-try_adjust(AId, AgentView, Problem) ->
+try_adjust(AId, AgentView, Nogoods, Problem) ->
     Current = proplists:get_value(AId, AgentView),
     lists:foldl(mk_adjust_one(AId, AgentView, Problem), false,
                 still_not_tried(Current, Problem#problem.num_agents)).
@@ -172,13 +174,13 @@ still_not_tried_test_() ->
                         still_not_tried({4,3}, 4)))].
 
 try_adjust_test_() ->
-    ?LET({Problem, AV1, AV2, AV3},
-         {problem(),
+    ?LET({Problem, NG, AV1, AV2, AV3},
+         {problem(), [],
           [{1,{1,1}}, {2,{3,3}}],
           [{1,{1,2}}, {2,{3,3}}],
           [{1,{1,1}}, {2,{3,4}}]},
-         [?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, Problem))),
-          ?_test(?assertEqual({ok, AV3}, try_adjust(2, AV1, Problem)))]).
+         [?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, NG, Problem))),
+          ?_test(?assertEqual({ok, AV3}, try_adjust(2, AV1, NG, Problem)))]).
 
 dependent_agents_test_() ->
     ?LET(Problem, problem(),
