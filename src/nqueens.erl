@@ -32,7 +32,7 @@ is_consistent(AId, AgentView, Problem) ->
     -> {ok, agent_view()} | false.
 try_adjust(AId, AgentView, Nogoods, Problem) ->
     Current = proplists:get_value(AId, AgentView),
-    lists:foldl(mk_adjust_one(AId, AgentView, Problem), false,
+    lists:foldl(mk_adjust_one(AId, AgentView, Nogoods, Problem), false,
                 still_not_tried(Current, Problem#problem.num_agents)).
 
 -spec dependent_agents(aid(), problem()) -> [aid()].
@@ -84,19 +84,27 @@ are_safe({Row1,Col1}, {Row2,Col2})
 are_safe(_, _) ->
     true.
 
-mk_adjust_one(AId, AgentView, Problem) ->
+mk_adjust_one(AId, AgentView, Nogoods, Problem) ->
     fun(_, {ok, NewAgentView}) ->
             {ok, NewAgentView};
        (NewCurrent, false) ->
             NewAgentView = lists:keyreplace(AId, 1, AgentView,
                                             {AId, NewCurrent}),
-            case is_consistent(AId, NewAgentView, Problem) of
-                true ->
-                    {ok, NewAgentView};
+            case is_nogood(NewAgentView, Nogoods) of
                 false ->
+                    case is_consistent(AId, NewAgentView, Problem) of
+                        true ->
+                            {ok, NewAgentView};
+                        false ->
+                            false
+                    end;
+                true ->
                     false
             end
     end.
+
+is_nogood(AgentView, Nogoods) ->
+    sets:is_element(AgentView, Nogoods).
 
 still_not_tried({Row,Col}, NumAgents) ->
     [{Row,C} || C <- lists:seq(Col+1, NumAgents) ++ lists:seq(1, Col)].
@@ -174,13 +182,22 @@ still_not_tried_test_() ->
                         still_not_tried({4,3}, 4)))].
 
 try_adjust_test_() ->
-    ?LET({Problem, NG, AV1, AV2, AV3},
-         {problem(), [],
+    ?LET({Problem, NG1, NG2, AV1, AV2, AV3, AV4, AV5},
+         {problem(),
+          sets:from_list([[{1,{1,1}}, {2,{2,3}}]]),
+          sets:from_list([[{1,{1,1}}, {2,{2,3}}],
+                          [{1,{1,1}}, {2,{2,4}}],
+                          [{1,{1,1}}, {2,{2,1}}],
+                          [{1,{1,1}}, {2,{2,2}}]]),
           [{1,{1,1}}, {2,{3,3}}],
           [{1,{1,2}}, {2,{3,3}}],
-          [{1,{1,1}}, {2,{3,4}}]},
-         [?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, NG, Problem))),
-          ?_test(?assertEqual({ok, AV3}, try_adjust(2, AV1, NG, Problem)))]).
+          [{1,{1,1}}, {2,{3,4}}],
+          [{1,{1,1}}, {2,{2,1}}],
+          [{1,{1,1}}, {2,{2,4}}]},
+         [?_test(?assertEqual({ok, AV2}, try_adjust(1, AV1, NG1, Problem))),
+          ?_test(?assertEqual({ok, AV3}, try_adjust(2, AV1, NG1, Problem))),
+          ?_test(?assertEqual({ok, AV5}, try_adjust(2, AV4, NG1, Problem))),
+          ?_test(?assertEqual(false, try_adjust(2, AV4, NG2, Problem)))]).
 
 dependent_agents_test_() ->
     ?LET(Problem, problem(),
