@@ -157,7 +157,7 @@ dependent_agents_test_() ->
     ?LET(Problem, problem(),
          [?_test(?assertEqual([3], dependent_agents(1, Problem))),
           ?_test(?assertEqual([3], dependent_agents(2, Problem))),
-          ?_test(?assertEqual([1,2], dependent_agents(3, Problem)))]).
+          ?_test(?assertEqual([], dependent_agents(3, Problem)))]).
 
 view_conversions_test_() ->
     ?LET({AV, VV},
