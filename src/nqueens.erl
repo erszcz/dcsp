@@ -174,8 +174,12 @@ still_not_tried_test_() ->
 %try_adjust_test_() ->
 %    ?_test(throw(fail)).
 
-%dependent_agents_test_() ->
-%    ?_test(throw(fail)).
+dependent_agents_test_() ->
+    ?LET(Problem, problem(),
+         [?_test(?assertEqual([2,3,4], dependent_agents(1, Problem))),
+          ?_test(?assertEqual([3,4], dependent_agents(2, Problem))),
+          ?_test(?assertEqual([4], dependent_agents(3, Problem))),
+          ?_test(?assertEqual([], dependent_agents(4, Problem)))]).
 
 %view_conversions_test_() ->
 %    ?_test(throw(fail)).
