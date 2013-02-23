@@ -26,7 +26,8 @@
                 problem :: problem(),
                 agent_view = [] :: agent_view(),
                 solver :: pid(),
-                others = [] :: [{pos_integer(), pid()}]}).
+                others = [] :: [{pos_integer(), pid()}],
+                nogoods = sets:new() :: set(agent_view())}).
 
 %%%===================================================================
 %%% API
@@ -210,15 +211,15 @@ handle_info({is_ok, {AId, Val}}, step,
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
     {next_state, step, NS, ?DONE_TIMEOUT};
 handle_info({nogood, SenderAId, Nogood}, step,
-            #state{agent_view = AgentView} = S) ->
+            #state{agent_view = AgentView, nogoods = Nogoods} = S) ->
     error_logger:info_msg("~p << {nogood, ~p, ~p}~n",
                           [S#state.id, SenderAId, Nogood]),
-    %% TODO: add nogood to nogood list -- wtf?
-    %%       there's no such thing as nogood list
     NewAgentView = lists:ukeymerge(1, Nogood, AgentView),
+    NewNogoods = sets:add_element(Nogood, Nogoods),
     AId = S#state.id,
     OldValue = proplists:get_value(AId, NewAgentView),
-    NS = check_agent_view(S#state{agent_view = NewAgentView}),
+    NS = check_agent_view(S#state{agent_view = NewAgentView,
+                                  nogoods = NewNogoods}),
     NewValue = proplists:get_value(AId, NS#state.agent_view),
     case OldValue == NewValue of
         true ->
@@ -315,8 +316,9 @@ adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
     end.
 
 try_adjust(#state{id = AId, agent_view = AgentView,
-                  module = Mod, problem = Problem}) ->
-    Mod:try_adjust(AId, AgentView, [], Problem).
+                  module = Mod, problem = Problem,
+                  nogoods = Nogoods}) ->
+    Mod:try_adjust(AId, AgentView, Nogoods, Problem).
 
 send_is_ok(AId, AgentView, State) ->
     AgentVal = {AId, proplists:get_value(AId, AgentView)},
