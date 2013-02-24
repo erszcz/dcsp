@@ -14,6 +14,3 @@
 
 -callback dependent_agents(aid(), problem())
     -> [aid()].
-
--callback nogoods(aid(), agent_view(), problem())
-    -> [agent_view()].

@@ -6,8 +6,7 @@
 -export([init/2,
          is_consistent/3,
          try_adjust/4,
-         dependent_agents/2,
-         nogoods/3]).
+         dependent_agents/2]).
 
 -include("dcsp.hrl").
 
@@ -68,10 +67,6 @@ dependent_agents(AId, #problem{} = P) ->
                             A == AId orelse B == AId ],
     {L,R} = lists:unzip(Concerning),
     [ E || E <- L ++ R, E > AId ].
-
--spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
-nogoods(AId, AgentView, _Problem) ->
-    [ lists:keydelete(AId, 1, AgentView) ].
 
 %% ------------------------------------------------------------------
 %% Helpers
@@ -173,18 +168,5 @@ view_conversions_test_() ->
                     AV1 = var_view_to_agent_view(VV),
                     ?assertEqual(VV, agent_view_to_var_view(AV1))
                  end)]).
-
-nogoods_test_() ->
-    ?LET({Problem,
-          AV1, Nogood1,
-          AV2, Nogood2,
-          AV3, Nogood3},
-         {problem(),
-          [{1,1}, {2,2}, {3,1}], [[{1,1}, {2,2}]],
-          [{1,1}, {2,2}, {3,2}], [[{1,1}, {2,2}]],
-          [{1,1}, {2,2}], [[{1,1}]]},
-         [?_test(?assertEqual(Nogood1, nogoods(3, AV1, Problem))),
-          ?_test(?assertEqual(Nogood2, nogoods(3, AV2, Problem))),
-          ?_test(?assertEqual(Nogood3, nogoods(2, AV3, Problem)))]).
 
 -endif.

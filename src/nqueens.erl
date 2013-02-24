@@ -6,8 +6,7 @@
 -export([init/2,
          is_consistent/3,
          try_adjust/4,
-         dependent_agents/2,
-         nogoods/3]).
+         dependent_agents/2]).
 
 -include_lib("dcsp/include/dcsp.hrl").
 
@@ -41,10 +40,6 @@ dependent_agents(AId, Problem) ->
     Agents = [GetAgents(C) || C <- concerning_constraints(AId, Problem)],
     {L,R} = lists:unzip(Agents),
     [ E || E <- L ++ R, E > AId ].
-
--spec nogoods(aid(), agent_view(), problem()) -> [agent_view()].
-nogoods(AId, AgentView, _Problem) ->
-    [ lists:keydelete(AId, 1, AgentView) ].
 
 %% ------------------------------------------------------------------
 %% Helpers
