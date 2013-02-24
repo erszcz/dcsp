@@ -107,7 +107,7 @@ is_nogood(AgentView, Nogoods) ->
     sets:is_element(AgentView, Nogoods).
 
 still_not_tried({Row,Col}, NumAgents) ->
-    [{Row,C} || C <- lists:seq(Col+1, NumAgents) ++ lists:seq(1, Col)].
+    [{Row,C} || C <- lists:seq(Col+1, NumAgents) ++ lists:seq(1, Col-1)].
 
 %% ------------------------------------------------------------------
 %% Tests
@@ -176,9 +176,9 @@ are_safe_test_() ->
      ?_test(?assertNot(are_safe({3,4},{4,3})))].
 
 still_not_tried_test_() ->
-    [?_test(?assertEqual([{4,2},{4,3},{4,4},{4,1}],
+    [?_test(?assertEqual([{4,2},{4,3},{4,4}],
                         still_not_tried({4,1}, 4))),
-     ?_test(?assertEqual([{4,4},{4,1},{4,2},{4,3}],
+     ?_test(?assertEqual([{4,4},{4,1},{4,2}],
                         still_not_tried({4,3}, 4)))].
 
 try_adjust_test_() ->
