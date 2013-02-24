@@ -20,6 +20,7 @@
 -include("dcsp.hrl").
 
 -define(DONE_TIMEOUT, 1000).
+-define(SINGLE_LINE_LOG, true).
 
 -record(state, {id :: integer(),
                 module :: atom(),
@@ -382,7 +383,15 @@ log_unexpected(What, Event, StateName, S) ->
         [What, StateName, Event], S).
 
 log(Format, Args, #state{id = AId}) ->
-    NewFormat = "[~b] " ++ Format,
+    NewFormat = case ?SINGLE_LINE_LOG of
+        true ->
+            Opts = [global, {return, list}],
+            NF = "[~b] " ++ Format,
+            NNF = re:replace(NF, "~p", "~w", Opts),
+            re:replace(NNF, "(~n)+", " ", Opts) ++ "~n";
+        false ->
+            "[~b] " ++ Format
+    end,
     NewArgs = [AId] ++ Args,
     Msg = io_lib:format(NewFormat, NewArgs),
     file:write_file("dcsp.log", Msg, [append]),
