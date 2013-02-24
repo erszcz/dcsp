@@ -74,7 +74,7 @@ init([AId, Problem, Solver]) ->
                problem = Problem,
                agent_view = AgentView,
                solver = Solver},
-    log("initial state: ~p~n", [S], S),
+    log("initial pos: ~p~n", [hd(AgentView)], S),
     {ok, initial, S}.
 
 %%--------------------------------------------------------------------
@@ -201,7 +201,6 @@ handle_sync_event(Event, _From, StateName, State) ->
 handle_info({go, AgentIds}, initial, S) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
     NS = S#state{others = Others},
-    log("others: ~p~n", [Others], NS),
     send_is_ok(NS#state.id, NS#state.agent_view, NS),
     {next_state, step, NS, ?DONE_TIMEOUT};
 
