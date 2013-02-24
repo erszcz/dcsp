@@ -213,7 +213,7 @@ handle_info({is_ok, Ref, {AId, Val}}, step,
     {next_state, step, NS, ?DONE_TIMEOUT};
 handle_info({nogood, Ref, SenderAId, Nogood}, step,
             #state{agent_view = AgentView, nogoods = Nogoods} = S) ->
-    NewAgentView = lists:ukeymerge(1, Nogood, AgentView),
+    NewAgentView = lists:ukeymerge(1, AgentView, Nogood),
     NewNogoods = sets:add_element(Nogood, Nogoods),
     log("<< {nogood, ~p, ~p, ~w}.~n  Nogoods: ~p~n",
         [Ref, SenderAId, Nogood, sets:to_list(NewNogoods)], S),
