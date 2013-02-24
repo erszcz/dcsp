@@ -73,7 +73,7 @@ init([AId, Problem, Solver]) ->
                problem = Problem,
                agent_view = AgentView,
                solver = Solver},
-    error_logger:info_msg("Agent ~p initial state:~n~p~n", [AId, S]),
+    log("initial state: ~p~n", [S], S),
     {ok, initial, S}.
 
 %%--------------------------------------------------------------------
@@ -200,22 +200,22 @@ handle_sync_event(Event, _From, StateName, State) ->
 handle_info({go, AgentIds}, initial, S) ->
     Others = [ {AId, Agent} || {AId, Agent} <- AgentIds, Agent /= self() ],
     NS = S#state{others = Others},
-    error_logger:info_msg("Others: ~p~n", [Others]),
+    log("others: ~p~n", [Others], NS),
     send_is_ok(NS#state.id, NS#state.agent_view, NS),
     {next_state, step, NS, ?DONE_TIMEOUT};
 
-handle_info({is_ok, {AId, Val}}, step,
+handle_info({is_ok, Ref, {AId, Val}}, step,
             #state{agent_view = AgentView} = S) ->
-    error_logger:info_msg("~p << {is_ok, {~p,~p}}~n", [S#state.id, AId, Val]),
+    log("<< {is_ok, ~p, {~p,~p}}~n", [Ref, AId, Val], S),
     NewAgentView = lists:sort(lists:keystore(AId, 1, AgentView, {AId, Val})),
     NS = check_agent_view(S#state{agent_view = NewAgentView}),
     {next_state, step, NS, ?DONE_TIMEOUT};
-handle_info({nogood, SenderAId, Nogood}, step,
+handle_info({nogood, Ref, SenderAId, Nogood}, step,
             #state{agent_view = AgentView, nogoods = Nogoods} = S) ->
-    error_logger:info_msg("~p << {nogood, ~p, ~p}~n",
-                          [S#state.id, SenderAId, Nogood]),
     NewAgentView = lists:ukeymerge(1, Nogood, AgentView),
     NewNogoods = sets:add_element(Nogood, Nogoods),
+    log("<< {nogood, ~p, ~p, ~w}.~n  Nogoods: ~p~n",
+        [Ref, SenderAId, Nogood, sets:to_list(NewNogoods)], S),
     AId = S#state.id,
     OldValue = proplists:get_value(AId, NewAgentView),
     NS = check_agent_view(S#state{agent_view = NewAgentView,
@@ -223,7 +223,7 @@ handle_info({nogood, SenderAId, Nogood}, step,
     NewValue = proplists:get_value(AId, NS#state.agent_view),
     case OldValue == NewValue of
         true ->
-            aid_to_pid(SenderAId, NS) ! {is_ok, {AId, NewValue}};
+            send_one_is_ok(SenderAId, {AId, NewValue}, NS);
         false ->
             ok
     end,
@@ -241,14 +241,13 @@ handle_info({done, ResultAgentView}, done,
         {true, _} ->
             aid_to_pid(AId - 1, S) ! {done, Merged};
         {_, _} ->
-            error_logger:info_msg("~p inconsistent merge result:~n~p~n",
-                                  [AId, Merged])
+            log("inconsistent merge result:~n~p~n", [Merged], S)
     end,
     {next_state, done, S, ?DONE_TIMEOUT};
-handle_info({is_ok, _} = Event, done, State) ->
+handle_info({is_ok, _, _} = Event, done, State) ->
     self() ! Event,
     {next_state, step, State};
-handle_info({nogood, _, _} = Event, done, State) ->
+handle_info({nogood, _, _, _} = Event, done, State) ->
     self() ! Event,
     {next_state, step, State};
 
@@ -291,14 +290,13 @@ check_agent_view(State) ->
         true ->
             State;
         false ->
-            error_logger:info_msg("~p inconsistent~n", [State#state.id]),
+            log("inconsistent.~n", [], State),
             adjust_or_backtrack(State)
     end.
 
 is_consistent(#state{module = Mod, agent_view = AgentView,
-                     problem = Problem, id = AId}) ->
-    error_logger:info_msg("~p agent view: ~p~n",
-                          [AId, AgentView]),
+                     problem = Problem, id = AId} = S) ->
+    log("agent view: ~p~n", [AgentView], S),
     Mod:is_consistent(AId, AgentView, Problem).
 
 adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
@@ -306,10 +304,10 @@ adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
         {ok, NewAgentView} ->
             NS = S#state{agent_view = NewAgentView},
             send_is_ok(AId, NewAgentView, NS),
-            error_logger:info_msg("~p adjusted. "
-                                  "Old agent view:~n~p~n"
-                                  "New agent view:~n~p~n",
-                                  [S#state.id, AgentView, NewAgentView]),
+            log("adjusted.~n"
+                "  Old agent view: ~p~n"
+                "  New agent view: ~p~n",
+                [AgentView, NewAgentView], NS),
             NS;
         false ->
             backtrack(S)
@@ -322,8 +320,13 @@ try_adjust(#state{id = AId, agent_view = AgentView,
 
 send_is_ok(AId, AgentView, State) ->
     AgentVal = {AId, proplists:get_value(AId, AgentView)},
-    [aid_to_pid(Other, State) ! {is_ok, AgentVal}
+    [send_one_is_ok(Other, AgentVal, State)
      || Other <- get_outgoing_links(State)].
+
+send_one_is_ok(To, Val, State) ->
+    Ref = make_ref(),
+    log("~p ! {is_ok, ~p, ~p}~n", [To, Ref, Val], State),
+    aid_to_pid(To, State) ! {is_ok, Ref, Val}.
 
 get_outgoing_links(#state{id = AId, module = Mod, problem = P}) ->
     Mod:dependent_agents(AId, P).
@@ -352,9 +355,9 @@ send_nogoods([], S) ->
     S;
 send_nogoods([Nogood | Nogoods], S) ->
     {AId, _} = get_min_priority_agent(Nogood),
-    error_logger:info_msg("~p: ~p ! {nogood, ~p, ~p}",
-                          [S#state.id, AId, S#state.id, Nogood]),
-    aid_to_pid(AId, S) ! {nogood, S#state.id, Nogood},
+    Ref = make_ref(),
+    log("~p ! {nogood, ~p, ~p, ~w}~n", [AId, Ref, S#state.id, Nogood], S),
+    aid_to_pid(AId, S) ! {nogood, Ref, S#state.id, Nogood},
     NewAgentView = lists:keydelete(AId, 1, S#state.agent_view),
     send_nogoods(Nogoods, S#state{agent_view = NewAgentView}).
 
@@ -364,8 +367,7 @@ get_min_priority_agent(AgentView) ->
 maybe_send_done(#state{id = AId, agent_view = AgentView, problem = P} = S) ->
     case AId > 0 andalso AId == P#problem.num_agents of
         true ->
-            error_logger:info_msg("~p: ~p ! {done, ~p}",
-                                  [AId, AId-1, AgentView]),
+            log("~p ! {done, ~p}~n", [AId-1, AgentView], S),
             aid_to_pid(AId-1, S) ! {done, AgentView};
         false ->
             ok
@@ -375,5 +377,14 @@ aid_to_pid(AId, #state{others = Others}) ->
     proplists:get_value(AId, Others).
 
 log_unexpected(What, Event, StateName, S) ->
-    error_logger:info_msg("~p unexpected ~s in '~p' state: ~p~n",
-                          [S#state.id, What, StateName, Event]).
+    log("unexpected ~s in '~p' state: ~p~n",
+        [What, StateName, Event], S).
+
+log(Format, Args, #state{id = AId}) ->
+    NewFormat = "[~b] " ++ Format,
+    NewArgs = [AId] ++ Args,
+    Msg = io_lib:format(NewFormat, NewArgs),
+    error_logger:info_msg(Msg),
+    file:write_file("dcsp.log", Msg, [append]),
+    AgentLog = lists:flatten(io_lib:format("dcsp-~b.log", [AId])),
+    file:write_file(AgentLog, Msg, [append]).
