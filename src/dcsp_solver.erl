@@ -63,7 +63,7 @@ start_link(Args) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Id, Problem, ResultHandler]) ->
-    error_logger:info_msg("~p ~p started. Problem: ~p~n",
+    error_logger:info_msg("~p ~p started.~nProblem: ~p~n",
                           [Id, self(), Problem]),
     OksAgentsIds = [ {dcsp_agent:start_link(AId, Problem, self()), AId}
                      || AId <- lists:seq(1, Problem#problem.num_agents) ],
@@ -178,8 +178,7 @@ solver_spec(SolverId, Args) ->
      transient, 5000, worker, [?MODULE]}.
 
 get_id() ->
-    list_to_atom("solver"
-                 ++ integer_to_list(dcsp_srv:get_solver_id(dcsp_srv))).
+    {solver,calendar:now_to_local_time(now())}.
 
 delete_spec(Id) ->
     error_logger:info_msg("Removing ~p spec: ~p~n",
