@@ -76,13 +76,18 @@ mk_check_constraint(VarView) ->
             error({unknown_constraint_type, Type})
     end.
 
+%% "Safe" means that the queens can't harm each other - that is
+%% they can't stand on the same horizontal or vertical line.
 are_safe({Row1,Col1}, {Row2,Col2})
         when Row1 == Row2;
-             Col1 == Col2;
-             abs(Row1-Col1) == abs(Row2-Col2) ->
+             Col1 == Col2 ->
     false;
-are_safe(_, _) ->
-    true.
+%% They also can't stand on a diagonal.
+are_safe({Row1,Col1}, {Row2,Col2}) ->
+    {X1, Y1} = {Col1, Row1},
+    {X2, Y2} = {Col2, Row2},
+    {P, Q} = {X2-X1, Y2-Y1},
+    not (P == Q orelse P == -Q).
 
 mk_adjust_one(AId, AgentView, Nogoods, Problem) ->
     fun(_, {ok, NewAgentView}) ->
@@ -130,10 +135,11 @@ problem() ->
 
 
 is_consistent_test_() ->
-    ?LET({Problem, AV1, AV2},
+    ?LET({Problem, AV1, AV2, AV3},
          {problem(),
           [{1,{1,3}}, {2,{2,1}}],
-          [{1,{1,3}}, {2,{2,1}}, {4,{3,2}}]},
+          [{1,{1,3}}, {2,{2,1}}, {4,{3,2}}],
+          [{1,{1,2}}, {2,{2,4}}, {4,{4,3}}]},
          [?_test(?assert(is_consistent(1, AV1, Problem))),
           ?_test(?assert(is_consistent(3, AV1, Problem))),
           ?_test(?assert(is_consistent(2, AV1, Problem))),
@@ -141,7 +147,9 @@ is_consistent_test_() ->
           ?_test(?assert(is_consistent(1, AV2, Problem))),
           ?_test(?assert(is_consistent(3, AV2, Problem))),
           ?_test(?assertNot(is_consistent(2, AV2, Problem))),
-          ?_test(?assertNot(is_consistent(4, AV2, Problem)))]).
+          ?_test(?assertNot(is_consistent(4, AV2, Problem))),
+
+          ?_test(?assert(is_consistent(4, AV3, Problem)))]).
 
 are_safe_test_() ->
     [%% 2x2 chessboard
@@ -173,7 +181,9 @@ are_safe_test_() ->
      ?_test(?assert(   are_safe({3,1},{1,2}))),
 
      ?_test(?assertNot(are_safe({2,4},{4,2}))),
-     ?_test(?assertNot(are_safe({3,4},{4,3})))].
+     ?_test(?assertNot(are_safe({3,4},{4,3}))),
+
+     ?_test(?assert(   are_safe({1,2},{4,3})))].
 
 still_not_tried_test_() ->
     [?_test(?assertEqual([{4,2},{4,3},{4,4}],
