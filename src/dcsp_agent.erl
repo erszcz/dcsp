@@ -386,7 +386,6 @@ log(Format, Args, #state{id = AId}) ->
     NewFormat = "[~b] " ++ Format,
     NewArgs = [AId] ++ Args,
     Msg = io_lib:format(NewFormat, NewArgs),
-    error_logger:info_msg(Msg),
     file:write_file("dcsp.log", Msg, [append]),
     AgentLog = lists:flatten(io_lib:format("dcsp-~b.log", [AId])),
     file:write_file(AgentLog, Msg, [append]).
