@@ -27,7 +27,8 @@
                 agent_view = [] :: agent_view(),
                 solver :: pid(),
                 others = [] :: [{pos_integer(), pid()}],
-                nogoods = sets:new() :: set(agent_view())}).
+                nogoods = sets:new() :: set(agent_view()),
+                last_nogood :: agent_view()}).
 
 %%%===================================================================
 %%% API
@@ -310,7 +311,13 @@ adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
                 [AgentView, NewAgentView], NS),
             NS;
         false ->
-            backtrack(S)
+            Nogood = lists:keydelete(AId, 1, AgentView),
+            NewNogoods = sets:add_element(Nogood, S#state.nogoods),
+            log("nogood: ~p.~n"
+                "  Nogoods: ~p~n",
+                [Nogood, sets:to_list(NewNogoods)], S),
+            backtrack(S#state{nogoods = NewNogoods,
+                              last_nogood = Nogood})
     end.
 
 try_adjust(#state{id = AId, agent_view = AgentView,
@@ -331,35 +338,28 @@ send_one_is_ok(To, Val, State) ->
 get_outgoing_links(#state{id = AId, module = Mod, problem = P}) ->
     Mod:dependent_agents(AId, P).
 
-backtrack(State) ->
-    Nogoods = get_nogoods(State),
+backtrack(#state{nogoods = Nogoods} = State) ->
     case contains_empty_nogood(Nogoods) of
         true ->
             no_solution(State),
             State;
         false ->
-            check_agent_view(send_nogoods(Nogoods, State))
+            check_agent_view(send_nogoods(State))
     end.
 
-get_nogoods(#state{id = AId, agent_view = AgentView,
-                   module = Mod, problem = P}) ->
-    Mod:nogoods(AId, AgentView, P).
-
 contains_empty_nogood(Nogoods) ->
-    lists:any(fun([]) -> true; (_) -> false end, Nogoods).
+    sets:is_element([], Nogoods).
 
 no_solution(#state{solver = Solver}) ->
     Solver ! no_solution.
 
-send_nogoods([], S) ->
-    S;
-send_nogoods([Nogood | Nogoods], S) ->
-    {AId, _} = get_min_priority_agent(Nogood),
+send_nogoods(#state{last_nogood = Nogood} = S) ->
+    AId = get_min_priority_agent(Nogood, S),
     Ref = make_ref(),
     log("~p ! {nogood, ~p, ~p, ~w}~n", [AId, Ref, S#state.id, Nogood], S),
     aid_to_pid(AId, S) ! {nogood, Ref, S#state.id, Nogood},
     NewAgentView = lists:keydelete(AId, 1, S#state.agent_view),
-    send_nogoods(Nogoods, S#state{agent_view = NewAgentView}).
+    S#state{agent_view = NewAgentView}.
 
 get_min_priority_agent(AgentView) ->
     lists:max(AgentView).
