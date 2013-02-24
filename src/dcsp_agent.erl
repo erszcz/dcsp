@@ -361,8 +361,8 @@ send_nogoods(#state{last_nogood = Nogood} = S) ->
     NewAgentView = lists:keydelete(AId, 1, S#state.agent_view),
     S#state{agent_view = NewAgentView}.
 
-get_min_priority_agent(AgentView) ->
-    lists:max(AgentView).
+get_min_priority_agent(AgentView, S) ->
+    lists:max([AId || {AId, _} <- AgentView, AId /= S#state.id]).
 
 maybe_send_done(#state{id = AId, agent_view = AgentView, problem = P} = S) ->
     case AId > 0 andalso AId == P#problem.num_agents of
