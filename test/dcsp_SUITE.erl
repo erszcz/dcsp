@@ -2,12 +2,13 @@
 -compile(export_all).
 
 -include_lib("common_test/include/ct.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 all() ->
     [{group, main}].
 
 groups() ->
-    [{main, [{repeat, 30}], [check_result]}].
+    [{main, [{repeat, 50}], [check_result]}].
 
 %% ------------------------------------------------------------------
 %% Setup / Teardown
@@ -15,7 +16,7 @@ groups() ->
 
 init_per_suite(Config) ->
     dcsp:start(),
-    Problem = dcsp_problem:from_file("../../ex1.problem"),
+    Problem = dcsp_problem:from_file("../../nqueens5.problem"),
     [{problem, Problem} | Config].
 
 end_per_suite(_Config) ->
@@ -33,4 +34,4 @@ end_per_testcase(_TestCase, _Config) ->
 
 check_result(Config) ->
     Problem = ?config(problem, Config),
-    [{1,2},{2,2},{3,1}] = lists:sort(dcsp:solve(Problem)).
+    ?assert(timeout /= dcsp:solve(Problem)).

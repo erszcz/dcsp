@@ -229,9 +229,26 @@ handle_info({nogood, Ref, SenderAId, Nogood}, step,
             ok
     end,
     {next_state, step, NS, ?DONE_TIMEOUT};
+handle_info({done, _} = Done, step, State) ->
+    handle_done(Done, State),
+    {next_state, done, State, ?DONE_TIMEOUT};
 
-handle_info({done, ResultAgentView}, done,
-            #state{id = AId, agent_view = AgentView,
+handle_info({done, _} = Done, done, State) ->
+    handle_done(Done, State),
+    {next_state, done, State, ?DONE_TIMEOUT};
+handle_info({is_ok, _, _} = Event, done, State) ->
+    self() ! Event,
+    {next_state, step, State};
+handle_info({nogood, _, _, _} = Event, done, State) ->
+    self() ! Event,
+    {next_state, step, State};
+
+handle_info(Info, StateName, State) ->
+    log_unexpected(info, Info, StateName, State),
+    {next_state, StateName, State}.
+
+handle_done({done, ResultAgentView},
+            #state{agent_view = AgentView, id = AId,
                    module = Mod, problem = P} = S) ->
     Merged = lists:ukeymerge(1, AgentView, ResultAgentView),
     case {Mod:is_consistent(AId, Merged, P),
@@ -243,18 +260,7 @@ handle_info({done, ResultAgentView}, done,
             aid_to_pid(AId - 1, S) ! {done, Merged};
         {_, _} ->
             log("inconsistent merge result:~n~p~n", [Merged], S)
-    end,
-    {next_state, done, S, ?DONE_TIMEOUT};
-handle_info({is_ok, _, _} = Event, done, State) ->
-    self() ! Event,
-    {next_state, step, State};
-handle_info({nogood, _, _, _} = Event, done, State) ->
-    self() ! Event,
-    {next_state, step, State};
-
-handle_info(Info, StateName, State) ->
-    log_unexpected(info, Info, StateName, State),
-    {next_state, StateName, State}.
+    end.
 
 %%--------------------------------------------------------------------
 %% @private

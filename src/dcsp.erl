@@ -39,8 +39,8 @@ solve(Problem) ->
             Result;
         {no_solution, Ref} ->
             no_solution
-        after 5000 ->
-            exit(Pid, normal),
+    after 5000 ->
+            exit(Pid, shutdown),
             timeout
     end.
 
