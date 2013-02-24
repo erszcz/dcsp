@@ -1,0 +1,11 @@
+{module, nqueens}.
+{num_agents, 4}.
+{initial, []}.
+{constraints, [{{x,1}, safe, {x,2}},
+               {{x,1}, safe, {x,3}},
+               {{x,1}, safe, {x,4}},
+
+               {{x,2}, safe, {x,3}},
+               {{x,2}, safe, {x,4}},
+
+               {{x,3}, safe, {x,4}}]}.

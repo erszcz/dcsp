@@ -1,0 +1,36 @@
+{module, nqueens}.
+{num_agents, 8}.
+{constraints, [{{x,1}, safe, {x,2}},
+               {{x,1}, safe, {x,3}},
+               {{x,1}, safe, {x,4}},
+               {{x,1}, safe, {x,5}},
+               {{x,1}, safe, {x,6}},
+               {{x,1}, safe, {x,7}},
+               {{x,1}, safe, {x,8}},
+
+               {{x,2}, safe, {x,3}},
+               {{x,2}, safe, {x,4}},
+               {{x,2}, safe, {x,5}},
+               {{x,2}, safe, {x,6}},
+               {{x,2}, safe, {x,7}},
+               {{x,2}, safe, {x,8}},
+
+               {{x,3}, safe, {x,4}},
+               {{x,3}, safe, {x,5}},
+               {{x,3}, safe, {x,6}},
+               {{x,3}, safe, {x,7}},
+               {{x,3}, safe, {x,8}},
+
+               {{x,4}, safe, {x,5}},
+               {{x,4}, safe, {x,6}},
+               {{x,4}, safe, {x,7}},
+               {{x,4}, safe, {x,8}},
+
+               {{x,5}, safe, {x,6}},
+               {{x,5}, safe, {x,7}},
+               {{x,5}, safe, {x,8}},
+
+               {{x,6}, safe, {x,7}},
+               {{x,6}, safe, {x,8}},
+
+               {{x,7}, safe, {x,8}}]}.

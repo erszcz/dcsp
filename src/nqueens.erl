@@ -19,7 +19,13 @@
 
 -spec init(aid(), problem()) -> agent_view().
 init(AId, #problem{} = P) ->
-    [{AId, lists:nth(AId, P#problem.initial)}].
+    try
+        [{AId, lists:nth(AId, P#problem.initial)}]
+    catch
+        error:function_clause ->
+            random:seed(now()),
+            [{AId, {AId, random:uniform(P#problem.num_agents)}}]
+    end.
 
 -spec is_consistent(aid(), agent_view(), problem()) -> boolean().
 is_consistent(AId, AgentView, Problem) ->
