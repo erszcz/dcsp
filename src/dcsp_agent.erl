@@ -296,8 +296,10 @@ check_agent_view(State) ->
     end.
 
 is_consistent(#state{module = Mod, agent_view = AgentView,
-                     problem = Problem, id = AId} = S) ->
+                     problem = Problem, id = AId, nogoods = Nogoods} = S) ->
     log("agent view: ~p~n", [AgentView], S),
+    not sets:is_element(AgentView, Nogoods)
+    andalso
     Mod:is_consistent(AId, AgentView, Problem).
 
 adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
