@@ -10,6 +10,9 @@ import java.awt.Insets;
 import java.awt.ScrollPane;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -47,12 +50,17 @@ public class DCSPFrame extends JFrame {
 
 	private int width = 1024;
 	private int height = 768;
+	
+	private LogParser logParser = new LogParser();
+	
+	
+	private boolean first = false;
 
 	public void init() {
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		//setSize(width, height);
-		setPreferredSize(new Dimension(width,height));
+		// setSize(width, height);
+		setPreferredSize(new Dimension(width, height));
 		getContentPane().setLayout(new GridLayout(1, 2));
 
 		// Build the left side of the window
@@ -96,7 +104,7 @@ public class DCSPFrame extends JFrame {
 		rightSide.setLayout(new GridBagLayout());
 		GridBagConstraints c2 = new GridBagConstraints();
 		textlog = new DCSPLogTextArea();
-		textlog.setText("Set up a simulation to fill this box...");
+		textlog.setText("Click New Simulation to start...\n");
 		textlog.setEnabled(false);
 		textlog.setEditable(false);
 		textareaScrollPane = new JScrollPane(textlog);
@@ -130,7 +138,9 @@ public class DCSPFrame extends JFrame {
 
 		newSimButton.addActionListener(new NewSimActionListener());
 		runButton.addActionListener(new RunActionListener());
-
+		nextButton.addActionListener(new NextActionListener());
+		prevButton.addActionListener(new PrevActionListener());
+		
 		pack();
 		setVisible(true);
 	}
@@ -142,23 +152,36 @@ public class DCSPFrame extends JFrame {
 
 			int result = -1;
 			try {
+				//TODO NewSimActionListener back to production mode
+				/*
 				result = Integer.parseInt(JOptionPane.showInputDialog(
 						DCSPFrame.this,
 						"Enter new simulation size (a positive integer):"));
+				*/
 				
-				if(result>0){
-					
+				//temporarily
+				result=4;
+
+				if (result > 0) {
+
+					textlog.setText("Click the checkerboard to set up the initial conditions, then press run...");
 					boardPanel.setProblemSize(result);
+					logParser.setProblemSize(result);
 					boardPanel.setInteractiveMode(true);
 					runButton.setEnabled(true);
+					
 					DCSPFrame.this.pack();
 					boardPanel.revalidate();
 					checkerboardScrollPane.revalidate();
 					
+					prevButton.setEnabled(false);
+					nextButton.setEnabled(false);
 					
+
 				} else {
-					
-					JOptionPane.showMessageDialog(DCSPFrame.this, "Invalid input");
+
+					JOptionPane.showMessageDialog(DCSPFrame.this,
+							"Invalid input");
 				}
 
 			} catch (NumberFormatException nfe) {
@@ -166,17 +189,120 @@ public class DCSPFrame extends JFrame {
 			}
 
 		}
+	}
 
+	private class RunActionListener implements ActionListener {
+
+		//TODO RunActionListener production mode
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			//System.out.println(boardPanel.getCommandString());
+/*
+ * 			THIS FRAGMENT WORKS, IT'LL BE UNCOMMENTED LATER
+ * 			I just want an unchanging log to be testing on
+ * 
+			try {
+				Process erl = Runtime.getRuntime().exec("cmd /C escript dcsp.escript nqueens1.problem");
+
+				BufferedReader stdInput = new BufferedReader(
+						new InputStreamReader(erl.getInputStream()));
+				BufferedReader stdError = new BufferedReader(
+						new InputStreamReader(erl.getErrorStream()));
+
+				erl.waitFor();
+
+				String results = "";
+				String s;
+
+				while ((s = stdInput.readLine()) != null) {
+					//System.out.println(s);
+					results = results + s;
+				}
+				// read any errors from the attempted command
+				// System.out.println("Here is the standard error of the command (if any):\n");
+				while ((s = stdError.readLine()) != null) {
+					//System.out.println(s);
+					results = results + s;
+				}
+				
+				textlog.setText(results);
+
+			} catch (IOException | InterruptedException e1) {
+				e1.printStackTrace();
+			}
+*/
+			
+			// read the log and initiate the "film"
+			logParser.readLogFile();
+			textlog.setEnabled(true);
+			textlog.setText("Click Next and Prev to browse the solving process...\n\n");
+			textlog.append("The complete initial conditions are:\n");
+			textlog.append(logParser.getInitialPositionsAsString());
+
+			boardPanel.setPositions(logParser.getInitialPositions());
+			logParser.removeUnused();
+			//prevButton.setEnabled(true);
+			
+			nextButton.setEnabled(true);
+			first = true;
+		}
 	}
 	
-	private class RunActionListener implements ActionListener{
+
+	
+	private class NextActionListener implements ActionListener{		
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			
+			if(first){				
+				displaySolutionLog();
+			}
+			
+			boardPanel.advance();
+			LogMessage m = logParser.parseNext();
+			boardPanel.storeMessage(m);
+			
+			//textlog.setText(m.content);
+			textlog.highlightLine(logParser.at);
+			//System.out.println(logParser.at+"/"+logParser.log.size());
+			
+			// the last line of the log is the DONE log
+			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
+			prevButton.setEnabled(logParser.at>0);
+		}
+		
+	
+		private void displaySolutionLog(){
+		
+			textlog.setText(logParser.log.get(0));			
+			for(int i =1; i< logParser.log.size(); i++){
+				
+				textlog.append("\n");
+				textlog.append(logParser.log.get(i));
+			}
+			textlog.append("\n");
+			first = false;
+		}		
+	}
+	
+	
+	private class PrevActionListener implements ActionListener{
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			System.out.println(boardPanel.getCommandString());
 			
-			// TODO orchestrate cooperation with Erlang agent module
+			LogMessage m = logParser.parsePrev();
+			boardPanel.storeMessage(m);
+			
+			//textlog.setText(m.content);
+			textlog.highlightLine(logParser.at);
+			//System.out.println(logParser.at+"/"+logParser.log.size());
+			
+			// the last line of the log is the DONE log
+			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
+			prevButton.setEnabled(logParser.at>0);
+			
 		}
 	}
-
 }
