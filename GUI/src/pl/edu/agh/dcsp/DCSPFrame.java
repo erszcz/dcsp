@@ -15,6 +15,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -25,6 +26,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultCaret;
 
 public class DCSPFrame extends JFrame {
 
@@ -112,6 +115,8 @@ public class DCSPFrame extends JFrame {
 		textlog.setText("Click New Simulation to start...\n");
 		textlog.setEnabled(false);
 		textlog.setEditable(false);
+		DefaultCaret caret = (DefaultCaret)textlog.getCaret();
+		caret.setUpdatePolicy(DefaultCaret.NEVER_UPDATE); // suppresses autoscroll on setText
 		textareaScrollPane = new JScrollPane(textlog);
 		c2.fill = GridBagConstraints.BOTH;
 		c2.insets = new Insets(10, 10, 10, 10);
@@ -157,6 +162,8 @@ public class DCSPFrame extends JFrame {
 		runButton.addActionListener(new RunActionListener());
 		nextButton.addActionListener(new NextActionListener());
 		prevButton.addActionListener(new PrevActionListener());
+		playButton.addActionListener(new PlayActionListener());
+		pauseButton.addActionListener(new PauseActionListener());
 		
 		pack();
 		setVisible(true);
@@ -185,12 +192,14 @@ public class DCSPFrame extends JFrame {
 					boardPanel.setProblemSize(result);
 					logParser.setProblemSize(result);
 					boardPanel.setInteractiveMode(true);
-					runButton.setEnabled(true);
 					
 					DCSPFrame.this.pack();
 					boardPanel.revalidate();
 					checkerboardScrollPane.revalidate();
 					
+					playButton.setEnabled(false);
+					pauseButton.setEnabled(false);
+					runButton.setEnabled(true);
 					prevButton.setEnabled(false);
 					nextButton.setEnabled(false);
 					
@@ -261,8 +270,11 @@ public class DCSPFrame extends JFrame {
 			logParser.removeUnused();
 			//prevButton.setEnabled(true);
 			
+			playButton.setEnabled(true);
 			nextButton.setEnabled(true);
 			first = true;
+			pauseButton.setEnabled(false);
+			runButton.setEnabled(false);
 		}
 	}
 	
@@ -279,10 +291,26 @@ public class DCSPFrame extends JFrame {
 			textlog.highlightLine(m.oldPos, Color.CYAN);
 		}
 		textlog.highlightLine(logParser.at, Color.LIGHT_GRAY);
+		try {
+			textlog.setCaretPosition(textlog.getLineStartOffset(logParser.at));
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 	}
 	
-
+	private void displaySolutionLog(){
+		
+		textlog.setText(logParser.log.get(0));			
+		for(int i =1; i< logParser.log.size(); i++){
+			
+			textlog.append("\n");
+			textlog.append(logParser.log.get(i));
+		}
+		textlog.append("\n");
+		first = false;
+	}		
 	
 	private class NextActionListener implements ActionListener{		
 
@@ -299,22 +327,11 @@ public class DCSPFrame extends JFrame {
 			handleLogMsg(m);
 			
 			// the last line of the log is the DONE log
+			playButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			prevButton.setEnabled(logParser.at>0);
 		}
-		
-	
-		private void displaySolutionLog(){
-		
-			textlog.setText(logParser.log.get(0));			
-			for(int i =1; i< logParser.log.size(); i++){
-				
-				textlog.append("\n");
-				textlog.append(logParser.log.get(i));
-			}
-			textlog.append("\n");
-			first = false;
-		}		
+
 	}
 	
 	
@@ -327,20 +344,56 @@ public class DCSPFrame extends JFrame {
 			handleLogMsg(m);
 			
 			// the last line of the log is the DONE log
+			playButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			prevButton.setEnabled(logParser.at>0);		
 		}
 	}
+	
+	Timer timer;
 	
 	//TODO implement play and pause operations on timers
 	private class PlayActionListener implements ActionListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
+			nextButton.setEnabled(false);
+			prevButton.setEnabled(false);
+			pauseButton.setEnabled(true);
+			playButton.setEnabled(false);
+			timer = new Timer();
+			timer.schedule(new TimerTask(){
+				@Override
+				public void run() {
+					if(first){				
+						displaySolutionLog();
+					}				
+					boardPanel.advance();
+					LogMessage m = logParser.parseNext();
+					handleLogMsg(m);
+					if(logParser.at==logParser.log.size()-1){
+						timer.cancel();
+						prevButton.setEnabled(true);
+						nextButton.setEnabled(false);
+						pauseButton.setEnabled(false);
+					}
+				}
+			}, 0,1*100); // 0 delay, 1 time per 0.1s rate
 			
-		
-			Timer timer = new Timer();
 			
+		}
+	}
+	
+	private class PauseActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+						
+			timer.cancel();
+			pauseButton.setEnabled(false);
+			playButton.setEnabled(logParser.at!=logParser.log.size()-1);
+			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
+			prevButton.setEnabled(logParser.at>0);
 		}
 	}
 }
