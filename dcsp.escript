@@ -8,4 +8,5 @@ main([]) ->
 main([File]) ->
     error_logger:delete_report_handler(error_logger_tty_h),
     dcsp:start(),
+	file:delete("dcsp.log"),
     io:format("~p~n", [dcsp:solve(dcsp_problem:from_file(File))]).

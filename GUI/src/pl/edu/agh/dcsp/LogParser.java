@@ -253,8 +253,6 @@ public class LogParser {
 			lm.sender = from;			
 			lm.content = s;
 			
-			// TODO find_nogood: --> does it need more?
-			
 			return lm;
 		}
 				

@@ -8,10 +8,16 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.Point;
 import java.awt.ScrollPane;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Timer;
@@ -62,7 +68,8 @@ public class DCSPFrame extends JFrame {
 	private LogParser logParser = new LogParser();
 	
 	
-	private boolean first = false;
+	private boolean logUndisplayed = true;
+	private boolean playing=false;
 
 	public void init() {
 
@@ -164,6 +171,7 @@ public class DCSPFrame extends JFrame {
 		prevButton.addActionListener(new PrevActionListener());
 		playButton.addActionListener(new PlayActionListener());
 		pauseButton.addActionListener(new PauseActionListener());
+		textlog.addMouseListener(new TextLogClickListener());
 		
 		pack();
 		setVisible(true);
@@ -176,15 +184,15 @@ public class DCSPFrame extends JFrame {
 
 			int result = -1;
 			try {
-				//TODO NewSimActionListener back to production mode
-				/*
+				
+				
 				result = Integer.parseInt(JOptionPane.showInputDialog(
 						DCSPFrame.this,
 						"Enter new simulation size (a positive integer):"));
-				*/
-				
-				//temporarily
-				result=4;
+			
+				//result=4;
+				logUndisplayed=true;
+				playing=false;
 
 				if (result > 0) {
 
@@ -219,16 +227,43 @@ public class DCSPFrame extends JFrame {
 
 	private class RunActionListener implements ActionListener {
 
-		//TODO RunActionListener production mode
-		@Override
-		public void actionPerformed(ActionEvent e) {
-			//System.out.println(boardPanel.getCommandString());
-/*
- * 			THIS FRAGMENT WORKS, IT'LL BE UNCOMMENTED LATER
- * 			I just want an unchanging log to be testing on
- * 
+		
+		private void buildProblemFile(){
+			
+
+			String problemFileContent = boardPanel.getCommandString();
+			
+			
+			File problemFile = new File("gui.problem");
+			
 			try {
-				Process erl = Runtime.getRuntime().exec("cmd /C escript dcsp.escript nqueens1.problem");
+				if(!problemFile.exists()) {
+				      problemFile.createNewFile();
+				   }
+				   FileOutputStream fop=new FileOutputStream(problemFile,false);
+				   if(problemFileContent!=null)
+				      fop.write(problemFileContent.getBytes());
+				   fop.flush();
+				   fop.close();
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		private void callBackend(){			
+			try {
+				
+				String command = "";
+				
+				if(System.getProperty("os.name").startsWith("Windows")){
+					command = "cmd /C escript dcsp.escript gui.problem";
+				} else {
+					command = "escript dcsp.escript gui.problem";
+				}
+				
+				Process erl = Runtime.getRuntime().exec(command);
 
 				BufferedReader stdInput = new BufferedReader(
 						new InputStreamReader(erl.getInputStream()));
@@ -251,15 +286,23 @@ public class DCSPFrame extends JFrame {
 					results = results + s;
 				}
 				
-				textlog.setText(results);
+				System.out.println(results);
 
 			} catch (IOException | InterruptedException e1) {
 				e1.printStackTrace();
 			}
-*/
+		}
+		
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			
+			buildProblemFile();
+			
+			callBackend();
 			
 			// read the log and initiate the "film"
 			logParser.readLogFile();
+			
 			textlog.setEnabled(true);
 			textlog.setText("Click Next and Prev to browse the solving process...\n\n");
 			textlog.append("The complete initial conditions are:\n");
@@ -272,7 +315,7 @@ public class DCSPFrame extends JFrame {
 			
 			playButton.setEnabled(true);
 			nextButton.setEnabled(true);
-			first = true;
+			logUndisplayed = true;
 			pauseButton.setEnabled(false);
 			runButton.setEnabled(false);
 		}
@@ -294,7 +337,6 @@ public class DCSPFrame extends JFrame {
 		try {
 			textlog.setCaretPosition(textlog.getLineStartOffset(logParser.at));
 		} catch (BadLocationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -309,7 +351,7 @@ public class DCSPFrame extends JFrame {
 			textlog.append(logParser.log.get(i));
 		}
 		textlog.append("\n");
-		first = false;
+		logUndisplayed = false;
 	}		
 	
 	private class NextActionListener implements ActionListener{		
@@ -317,7 +359,7 @@ public class DCSPFrame extends JFrame {
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			
-			if(first){				
+			if(logUndisplayed){				
 				displaySolutionLog();
 			}
 			
@@ -329,9 +371,8 @@ public class DCSPFrame extends JFrame {
 			// the last line of the log is the DONE log
 			playButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
-			prevButton.setEnabled(logParser.at>0);
+			prevButton.setEnabled(logParser.at>0);	
 		}
-
 	}
 	
 	
@@ -352,7 +393,6 @@ public class DCSPFrame extends JFrame {
 	
 	Timer timer;
 	
-	//TODO implement play and pause operations on timers
 	private class PlayActionListener implements ActionListener{
 
 		@Override
@@ -362,10 +402,11 @@ public class DCSPFrame extends JFrame {
 			pauseButton.setEnabled(true);
 			playButton.setEnabled(false);
 			timer = new Timer();
+			playing=true;
 			timer.schedule(new TimerTask(){
 				@Override
 				public void run() {
-					if(first){				
+					if(logUndisplayed){				
 						displaySolutionLog();
 					}				
 					boardPanel.advance();
@@ -390,10 +431,52 @@ public class DCSPFrame extends JFrame {
 		public void actionPerformed(ActionEvent e) {
 						
 			timer.cancel();
+			playing=false;
 			pauseButton.setEnabled(false);
 			playButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
 			prevButton.setEnabled(logParser.at>0);
 		}
+	}
+	
+	
+	private class TextLogClickListener implements MouseListener{
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			if(e.getClickCount()==2 && !playing && !logUndisplayed){
+				System.out.println("double clicked text area");
+				int startOffset = textlog.viewToModel(new Point(e.getX(), e.getY()));
+				try {
+					System.out.println("double clicked at text area at line: "+
+							textlog.getLineOfOffset(startOffset));
+				} catch (BadLocationException e1) {
+					e1.printStackTrace();
+				}
+			}
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent e) {
+			
+		}
+
+		@Override
+		public void mouseExited(MouseEvent e) {
+			
+		}
+
+		@Override
+		public void mousePressed(MouseEvent e) {
+
+			
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent e) {
+			
+		}
+		
+		
 	}
 }

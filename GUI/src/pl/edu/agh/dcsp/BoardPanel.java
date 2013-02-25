@@ -12,6 +12,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.geom.AffineTransform;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import javax.swing.JPanel;
@@ -185,7 +186,12 @@ public class BoardPanel extends JPanel {
 		}
 		setPreferredSize(new Dimension(N * cellSize, N * cellSize));
 
+		storedMessage=null;
 		repaint();
+	}
+	
+	public int getProblemSize(){
+		return N;
 	}
 
 	public void setInteractiveMode(boolean b) {
@@ -232,24 +238,35 @@ public class BoardPanel extends JPanel {
 
 	public String getCommandString(){
 	
-		StringBuilder sb = new StringBuilder();
 		
-		sb.append("N= "+N+"\n");
+		StringBuilder builder = new StringBuilder();
 		
-		int toRandom=0;
-		for(int i =0; i<N; i++){
-			if(queens[i]!=-1){
-				sb.append("["+i+","+queens[i]+"]\n");
-			} else {
-				toRandom++;
+		builder.append("{module, nqueens}.\n");
+		builder.append(String.format("{num_agents, %d}.\n", N));
+
+		builder.append("{initial, [");
+		//{initial, [{1,1},{2,1},{3,1},{4,1}]}.
+		for(int i=0; i<N-1; i++){
+			int y =(queens[i]==-1 ? (int)(Math.random()*N)+1 : queens[i]+1);
+			builder.append(String.format("{%d,%d},", i+1, y));
+		}
+		int last = N-1;
+		int y =(queens[last]==-1 ? (int)(Math.random()*N)+1 : queens[last]+1);
+		builder.append(String.format("{%d,%d}", last+1, y));
+		builder.append("]}.\n");
+		
+		builder.append("{constraints, [\n");
+		for(int i=1; i<getProblemSize()-1; i++){
+			for(int j=i+1; j<=getProblemSize();j++){
+				builder.append(String.format("{{x,%d}, safe, {x,%d}},\n", i,j));
 			}
+			builder.append("\n");
 		}
+		builder.append(String.format("{{x,%d}, safe, {x,%d}}",last,last+1));
 		
-		if(toRandom!=0){
-			sb.append("wylosuj sobie jeszcze "+(toRandom));
-		}
+		builder.append("]}.\n");
 		
-		return sb.toString();
+		return builder.toString();
 	}
 	
 	
