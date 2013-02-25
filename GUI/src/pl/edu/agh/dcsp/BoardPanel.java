@@ -150,6 +150,10 @@ public class BoardPanel extends JPanel {
 				g.drawOval(r / 2 + queens[i] * cellSize, r / 2 + i * cellSize, r, r);
 			}
 			break;
+		case RECEIVED:
+			g.setColor(Color.CYAN);
+			g.drawChars("msg <<".toCharArray(), 0, 6, senX-r/3, senY+r/8);
+			break;
 		}
 	}
 
@@ -266,7 +270,7 @@ public class BoardPanel extends JPanel {
 
 	public void storeMessage(LogMessage m) {
 		storedMessage=m;
-		if(storedMessage.type==LogMessage.Type.ADJUSTED){
+		if(storedMessage!=null && storedMessage.type==LogMessage.Type.ADJUSTED){
 			queens[storedMessage.sender]=storedMessage.oldPos;
 		}
 		repaint();

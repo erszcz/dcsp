@@ -1,6 +1,7 @@
 package pl.edu.agh.dcsp;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -13,6 +14,7 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Timer;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -20,6 +22,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 
@@ -46,6 +49,8 @@ public class DCSPFrame extends JFrame {
 	private JScrollPane textareaScrollPane;
 	private JButton prevButton;
 	private JButton nextButton;
+	private JButton pauseButton;
+	private JButton playButton;
 	private JPanel buttonContainerR;
 
 	private int width = 1024;
@@ -118,12 +123,24 @@ public class DCSPFrame extends JFrame {
 		rightSide.add(textareaScrollPane, c2);
 
 		buttonContainerR = new JPanel();
+		
+		pauseButton = new JButton("Pause");
+		pauseButton.setEnabled(false);
+		playButton = new JButton("Play");
+		playButton.setEnabled(false);
+		JSeparator sep = new JSeparator(JSeparator.VERTICAL);
+		buttonContainerR.add(pauseButton);
+		buttonContainerR.add(playButton);
+		buttonContainerR.add(sep);
+		
 		prevButton = new JButton("Prev");
 		prevButton.setEnabled(false);
 		buttonContainerR.add(prevButton);
 		nextButton = new JButton("Next");
 		nextButton.setEnabled(false);
 		buttonContainerR.add(nextButton);
+		
+		
 
 		c2.fill = GridBagConstraints.NONE;
 		c2.weighty = 0.1;
@@ -239,6 +256,7 @@ public class DCSPFrame extends JFrame {
 			textlog.append("The complete initial conditions are:\n");
 			textlog.append(logParser.getInitialPositionsAsString());
 
+			boardPanel.storeMessage(null);
 			boardPanel.setPositions(logParser.getInitialPositions());
 			logParser.removeUnused();
 			//prevButton.setEnabled(true);
@@ -246,6 +264,22 @@ public class DCSPFrame extends JFrame {
 			nextButton.setEnabled(true);
 			first = true;
 		}
+	}
+	
+	
+	private void handleLogMsg(LogMessage m){
+		
+		boardPanel.storeMessage(m);
+		
+		//textlog.setText(m.content);
+		textlog.removeHighlights();
+		//System.out.println(logParser.at+"/"+logParser.log.size());
+		
+		if(m.type==LogMessage.Type.RECEIVED){
+			textlog.highlightLine(m.oldPos, Color.CYAN);
+		}
+		textlog.highlightLine(logParser.at, Color.LIGHT_GRAY);
+		
 	}
 	
 
@@ -261,11 +295,8 @@ public class DCSPFrame extends JFrame {
 			
 			boardPanel.advance();
 			LogMessage m = logParser.parseNext();
-			boardPanel.storeMessage(m);
-			
-			//textlog.setText(m.content);
-			textlog.highlightLine(logParser.at);
-			//System.out.println(logParser.at+"/"+logParser.log.size());
+		
+			handleLogMsg(m);
 			
 			// the last line of the log is the DONE log
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
@@ -291,17 +322,24 @@ public class DCSPFrame extends JFrame {
 
 		@Override
 		public void actionPerformed(ActionEvent e) {
-			
+		
 			LogMessage m = logParser.parsePrev();
-			boardPanel.storeMessage(m);
-			
-			//textlog.setText(m.content);
-			textlog.highlightLine(logParser.at);
-			//System.out.println(logParser.at+"/"+logParser.log.size());
+			handleLogMsg(m);
 			
 			// the last line of the log is the DONE log
 			nextButton.setEnabled(logParser.at!=logParser.log.size()-1);
-			prevButton.setEnabled(logParser.at>0);
+			prevButton.setEnabled(logParser.at>0);		
+		}
+	}
+	
+	//TODO implement play and pause operations on timers
+	private class PlayActionListener implements ActionListener{
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			
+		
+			Timer timer = new Timer();
 			
 		}
 	}

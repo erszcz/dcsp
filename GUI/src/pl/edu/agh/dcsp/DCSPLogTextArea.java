@@ -24,21 +24,26 @@ public class DCSPLogTextArea extends JTextArea {
 
 
 	
-	public void highlightLine(int line){
+	public void highlightLine(int line, Color col){
 		
 		DefaultHighlighter h = (DefaultHighlighter) this.getHighlighter();
 		try {
-			h.removeAllHighlights();
-			DefaultHighlightPainter redHighlight = new DefaultHighlighter.DefaultHighlightPainter(
-					Color.LIGHT_GRAY);
+			
+			DefaultHighlightPainter hp = new DefaultHighlighter.DefaultHighlightPainter(
+					col);
 			
 			int start = this.getLineStartOffset(line);
             int end = this.getLineEndOffset(line);
 			
-			h.addHighlight(start, end, redHighlight);
+			h.addHighlight(start, end, hp);
 		} catch (BadLocationException ex) {
 			System.out.println("CAN'T HIGHLIGHT");
 		}
+	}
+	
+	public void removeHighlights(){
+		DefaultHighlighter h = (DefaultHighlighter) this.getHighlighter();
+		h.removeAllHighlights();
 	}
 
 }

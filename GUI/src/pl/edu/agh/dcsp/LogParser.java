@@ -17,6 +17,7 @@ public class LogParser {
 	
 	void readLogFile(){
 		try {
+			at=-1;
 			log = Files.readAllLines(Paths.get("dcsp.log"), Charset.defaultCharset());
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -70,6 +71,7 @@ public class LogParser {
 			log.remove(0);
 		}
 		
+		/**
 		Pattern receivePtrn = Pattern.compile("<<");
 		Iterator<String> it = log.iterator();
 		
@@ -82,6 +84,7 @@ public class LogParser {
 				it.remove();
 			}
 		}
+		*/
 	}
 	
 	
@@ -106,8 +109,8 @@ public class LogParser {
 		
 	//	System.out.println(s);
 		
-		if(s.contains("is_ok")){	
-			//System.out.println("is_ok");
+		if(s.contains("! {is_ok")){	
+			//System.out.println(" sent is_ok");
 			String[] splt = s.split(" ");
 			int from = Integer.parseInt(splt[0].replace("[", "").replace("]", ""))-1;
 			int to = Integer.parseInt(splt[1])-1;
@@ -255,8 +258,8 @@ public class LogParser {
 			return lm;
 		}
 				
-		if(s.contains("{nogood")){
-			///System.out.println("{nogood");
+		if(s.contains("! {nogood")){
+			///System.out.println(" sent nogood");
 			String[] splt = s.split(" ");
 			int from = Integer.parseInt(splt[0].replace("[", "").replace("]", ""))-1;
 			int to = Integer.parseInt(splt[1])-1;
@@ -280,6 +283,37 @@ public class LogParser {
 			lm.type=LogMessage.Type.DONE;
 			lm.sender = from;
 			lm.receiver = to;
+			lm.content = s;
+			
+			return lm;
+		}
+		
+		
+		if(s.contains("<<")){
+			
+			String[] splt = s.split(" ");
+			int from = Integer.parseInt(splt[0].replace("[", "").replace("]", ""))-1;
+			LogMessage lm = new LogMessage();
+			lm.type=LogMessage.Type.RECEIVED;
+			lm.sender = from;
+			
+			// USING newPos to remember receiving line id
+			// and oldPos to remember sending line id 
+			// associated with the sent message
+			lm.newPos = at;
+			lm.oldPos = at-1;
+			
+			StringBuffer sb = new StringBuffer(s);
+			int refBeginIndex = sb.lastIndexOf("#");
+			
+			int refEndIndex = sb.lastIndexOf(">")+1;
+			String refStr = s.substring(refBeginIndex, refEndIndex);
+			//System.out.println(refStr);
+			
+			while(!log.get(lm.oldPos).contains(refStr)){
+				lm.oldPos--;
+			}
+			
 			lm.content = s;
 			
 			return lm;
