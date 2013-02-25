@@ -312,11 +312,11 @@ adjust_or_backtrack(#state{id = AId, agent_view = AgentView} = S) ->
     case try_adjust(S) of
         {ok, NewAgentView} ->
             NS = S#state{agent_view = NewAgentView},
-            send_is_ok(AId, NewAgentView, NS),
             log("adjusted.~n"
                 "  Old agent view: ~p~n"
                 "  New agent view: ~p~n",
                 [AgentView, NewAgentView], NS),
+            send_is_ok(AId, NewAgentView, NS),
             NS;
         false ->
             Nogood = lists:keydelete(AId, 1, AgentView),
