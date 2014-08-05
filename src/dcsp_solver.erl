@@ -19,7 +19,7 @@
 
 -export([get_agents/1]).
 
--include("dcsp.hrl").
+-include("include/dcsp.hrl").
 
 -record(state, {id :: atom(),
                 agents = [] :: [{pos_integer(), pid()}],

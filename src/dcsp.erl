@@ -10,7 +10,7 @@
 -export([start/0,
          solve/1]).
 
--include("dcsp.hrl").
+-include("include/dcsp.hrl").
 
 %% -------------------------------------------------------------------
 %% Application callbacks

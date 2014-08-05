@@ -17,7 +17,7 @@
          terminate/3,
          code_change/4]).
 
--include("dcsp.hrl").
+-include("include/dcsp.hrl").
 
 -define(DONE_TIMEOUT, 1000).
 -define(SINGLE_LINE_LOG, true).

@@ -8,7 +8,7 @@
          try_adjust/4,
          dependent_agents/2]).
 
--include("dcsp.hrl").
+-include("include/dcsp.hrl").
 
 %% TODO: remove this attribute
 -compile([export_all]).

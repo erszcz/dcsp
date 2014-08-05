@@ -2,7 +2,7 @@
 
 -export([from_file/1]).
 
--include("dcsp.hrl").
+-include("include/dcsp.hrl").
 
 from_file(FileName) ->
     {ok, Contents} = file:consult(FileName),
